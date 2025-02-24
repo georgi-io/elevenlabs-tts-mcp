@@ -98,6 +98,9 @@ To connect the MCP server to Cursor:
 5. Save the configuration
 6. You should see a green checkmark indicating a successful connection
 
+<img width="532" alt="image" src="https://github.com/user-attachments/assets/29f2666a-63e8-41a4-b7b5-414cb42dbc54" />
+
+
 ### Using MCP Tools in Cursor
 
 Once connected, you can use the following MCP tools in Cursor:
@@ -119,7 +122,8 @@ The project includes a web interface for easy configuration and testing:
    - Adjust settings like auto-play and audio saving
    - View and manage your ElevenLabs configuration
 
-*Note: Screenshots of the web interface will be added to this README.*
+<img width="912" alt="image" src="https://github.com/user-attachments/assets/f563a372-3242-463e-9108-0426d2bf684f" />
+
 
 ## Configuration
 
