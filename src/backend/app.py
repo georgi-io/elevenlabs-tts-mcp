@@ -43,8 +43,12 @@ app.include_router(router)
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
 
-# Mount static files
-app.mount("/assets", StaticFiles(directory=str(static_dir / "assets")), name="assets")
+# Create assets directory if it doesn't exist
+assets_dir = static_dir / "assets"
+assets_dir.mkdir(exist_ok=True)
+
+# Mount static files only if the directory exists
+app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
 @app.get("/")
 async def root():
