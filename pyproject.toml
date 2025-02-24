@@ -31,6 +31,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 elevenlabs-mcp = "src.mcp_binary.main:main"
+start = "src.backend.__main__:main"
 
 [tool.black]
 line-length = 100
