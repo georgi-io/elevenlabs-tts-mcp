@@ -2,6 +2,14 @@
 
 This project integrates ElevenLabs Text-to-Speech capabilities with Cursor through the Model Context Protocol (MCP).
 
+## To-Do
+
+- [ ] Implement streaming audio support using the official ElevenLabs Python SDK
+  - Replace current implementation with `convert_as_stream` method
+  - Update backend to stream audio chunks to the client
+  - Modify frontend to handle streaming audio playback
+  - Reduce latency and improve user experience with real-time audio
+
 ## Quick Start
 
 For the fastest way to get up and running:
