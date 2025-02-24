@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 import httpx
 import os
 from fastapi import HTTPException
@@ -26,6 +26,7 @@ class ElevenLabsClient:
         """Fetch available voices from ElevenLabs API."""
         async with httpx.AsyncClient() as client:
             try:
+                logger.info("Fetching voices from ElevenLabs API")
                 response = await client.get(
                     f"{self.base_url}/voices",
                     headers=self.headers
@@ -33,13 +34,17 @@ class ElevenLabsClient:
                 
                 if response.status_code != 200:
                     error_detail = response.json() if response.content else "No error details"
+                    logger.error(f"Failed to fetch voices: {error_detail}")
                     raise HTTPException(
                         status_code=response.status_code,
                         detail=f"Failed to fetch voices from ElevenLabs API: {error_detail}"
                     )
                 
-                return response.json()["voices"]
+                data = response.json()
+                logger.info(f"Successfully fetched {len(data['voices'])} voices")
+                return data["voices"]
             except httpx.RequestError as e:
+                logger.error(f"Connection error when fetching voices: {str(e)}")
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to connect to ElevenLabs API: {str(e)}"
@@ -63,6 +68,8 @@ class ElevenLabsClient:
             }
         }
 
+        logger.info(f"Converting text to speech with voice_id={voice_id}, model_id={model_id}")
+        
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
@@ -73,22 +80,26 @@ class ElevenLabsClient:
 
                 if response.status_code != 200:
                     error_detail = response.json() if response.content else "No error details"
+                    logger.error(f"Text-to-speech conversion failed: {error_detail}")
                     raise HTTPException(
                         status_code=response.status_code,
                         detail=f"Text-to-speech conversion failed: {error_detail}"
                     )
 
+                logger.info("Successfully converted text to speech")
                 return response.content
             except httpx.RequestError as e:
+                logger.error(f"Connection error during text-to-speech: {str(e)}")
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to connect to ElevenLabs API: {str(e)}"
                 )
 
-    async def get_models(self) -> List[Dict]:
+    async def get_models(self) -> List[Dict[str, Any]]:
         """Fetch available models from ElevenLabs API."""
         async with httpx.AsyncClient() as client:
             try:
+                logger.info("Fetching models from ElevenLabs API")
                 response = await client.get(
                     f"{self.base_url}/models",
                     headers=self.headers
@@ -96,13 +107,25 @@ class ElevenLabsClient:
                 
                 if response.status_code != 200:
                     error_detail = response.json() if response.content else "No error details"
+                    logger.error(f"Failed to fetch models: {error_detail}")
                     raise HTTPException(
                         status_code=response.status_code,
                         detail=f"Failed to fetch models from ElevenLabs API: {error_detail}"
                     )
                 
-                return response.json()
+                data = response.json()
+                # Transform the response to match our expected format
+                models = []
+                for model in data:
+                    models.append({
+                        "model_id": model.get("model_id", ""),
+                        "name": model.get("name", "")
+                    })
+                
+                logger.info(f"Successfully fetched {len(models)} models")
+                return models
             except httpx.RequestError as e:
+                logger.error(f"Connection error when fetching models: {str(e)}")
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to connect to ElevenLabs API: {str(e)}"

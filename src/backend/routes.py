@@ -1,58 +1,118 @@
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+import json
+from pathlib import Path
 from .elevenlabs_client import ElevenLabsClient
 from .websocket import manager
+import os
+from fastapi.responses import StreamingResponse
 
 # Change the prefix to match the frontend API calls
 router = APIRouter(prefix="/api")
 client = ElevenLabsClient()
 
+# Configuration paths
+CONFIG_DIR = Path.home() / ".config" / "elevenlabs-mcp"
+CONFIG_FILE = CONFIG_DIR / "config.json"
+
+# Create config directory if it doesn't exist
+CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Default configuration
+DEFAULT_CONFIG = {
+    "default_voice_id": "21m00Tcm4TlvDq8ikWAM",
+    "default_model_id": "eleven_monolingual_v1",
+    "settings": {
+        "auto_play": True,
+        "save_audio": True
+    }
+}
+
 class TTSRequest(BaseModel):
     text: str
-    voice_id: str
-    model_id: Optional[str] = "eleven_monolingual_v1"
+    voice_id: Optional[str] = None
+    model_id: Optional[str] = None
 
 class MCPRequest(BaseModel):
     command: str
     params: Dict[str, Any]
 
-@router.get("/voices")
-async def get_voices() -> List[Dict]:
+class ConfigRequest(BaseModel):
+    default_voice_id: Optional[str] = None
+    default_model_id: Optional[str] = None
+    settings: Optional[Dict] = None
+
+class Voice(BaseModel):
+    voice_id: str
+    name: str
+
+class Model(BaseModel):
+    model_id: str
+    name: str
+
+def load_config() -> Dict[str, Any]:
+    """Load configuration from file or return default."""
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            return DEFAULT_CONFIG
+    else:
+        # Save default config if it doesn't exist
+        save_config(DEFAULT_CONFIG)
+        return DEFAULT_CONFIG
+
+def save_config(config: Dict[str, Any]) -> None:
+    """Save configuration to file."""
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+
+@router.get("/voices", response_model=List[Voice])
+async def get_voices():
     """Get all available voices."""
     try:
-        voices = await client.get_voices()
-        # Format the response to match the frontend expectations
-        return [{"voice_id": voice["voice_id"], "name": voice["name"]} for voice in voices]
+        voices_data = await client.get_voices()
+        return [Voice(voice_id=v["voice_id"], name=v["name"]) for v in voices_data]
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to fetch voices: {str(e)}")
 
-@router.get("/models")
-async def get_models() -> List[Dict]:
+@router.get("/models", response_model=List[Model])
+async def get_models():
     """Get all available models."""
-    return await client.get_models()
+    try:
+        models_data = await client.get_models()
+        return [Model(model_id=m["model_id"], name=m["name"]) for m in models_data]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch models: {str(e)}")
 
 @router.post("/tts")
-async def text_to_speech(request: TTSRequest) -> Response:
+async def text_to_speech(request: TTSRequest):
     """Convert text to speech."""
     try:
-        audio_content = await client.text_to_speech(
+        # Load configuration
+        config = load_config()
+        
+        # Use provided voice_id/model_id or default from config
+        voice_id = request.voice_id or config["default_voice_id"]
+        model_id = request.model_id or config["default_model_id"]
+        
+        # Generate audio using our client
+        audio = await client.text_to_speech(
             text=request.text,
-            voice_id=request.voice_id,
-            model_id=request.model_id
+            voice_id=voice_id,
+            model_id=model_id
         )
-        return Response(
-            content=audio_content,
-            media_type="audio/mpeg"
+        
+        # Return audio as streaming response
+        return StreamingResponse(
+            iter([audio]),
+            media_type="audio/mpeg",
+            headers={"Content-Disposition": "attachment; filename=speech.mp3"}
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to convert text to speech: {str(e)}")
 
 @router.post("/mcp")
 async def handle_mcp_request(request: MCPRequest) -> Dict:
@@ -100,4 +160,50 @@ async def handle_mcp_request(request: MCPRequest) -> Dict:
         raise HTTPException(
             status_code=500,
             detail=str(e)
-        ) 
+        )
+
+@router.get("/config")
+async def get_config():
+    """Get current configuration."""
+    try:
+        config = load_config()
+        return config
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get configuration: {str(e)}")
+
+@router.post("/config")
+async def update_config(request: ConfigRequest):
+    """Update configuration."""
+    try:
+        current_config = load_config()
+        
+        # Update configuration with provided data
+        if request.default_voice_id is not None:
+            current_config["default_voice_id"] = request.default_voice_id
+            
+        if request.default_model_id is not None:
+            current_config["default_model_id"] = request.default_model_id
+            
+        if request.settings is not None:
+            for key, value in request.settings.items():
+                if key in current_config["settings"]:
+                    current_config["settings"][key] = value
+        
+        # Save updated configuration
+        save_config(current_config)
+        
+        # Notify MCP about config changes
+        await manager.send_to_mcp({
+            "type": "config_update",
+            "config": current_config
+        })
+        
+        return current_config
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update configuration: {str(e)}")
+
+@router.get("/mcp/sse")
+async def mcp_sse(request: Request):
+    """MCP SSE endpoint for Cursor integration."""
+    from .app import mcp_server
+    return await mcp_server.run_sse(request) 

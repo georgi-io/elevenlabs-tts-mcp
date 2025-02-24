@@ -12,6 +12,8 @@ from .routes import router
 from .websocket import websocket_endpoint
 from mcp.server.fastmcp import FastMCP
 from starlette.responses import Response
+import logging
+from .mcp_tools import register_mcp_tools
 
 # Load environment variables
 load_dotenv()
@@ -20,6 +22,10 @@ load_dotenv()
 PORT = int(os.getenv("PORT", 9020))
 WS_PORT = int(os.getenv("WS_PORT", 9021))
 MCP_PORT = int(os.getenv("MCP_PORT", 9022))
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="ElevenLabs TTS MCP",
@@ -67,12 +73,11 @@ app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 mcp_server = FastMCP("ElevenLabs TTS")
 # Configure MCP server to use the port from environment variables
 mcp_server.settings.port = MCP_PORT
-from .mcp_tools import register_mcp_tools
 register_mcp_tools(mcp_server)
 
 # Start MCP server in a separate thread
 def start_mcp_server():
-    asyncio.run(mcp_server.run_sse_async())
+    mcp_server.run(transport='sse')
 
 # Start the MCP server in a background thread when the app starts
 @app.on_event("startup")
