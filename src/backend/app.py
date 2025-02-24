@@ -62,12 +62,23 @@ app.add_websocket_route("/ws", websocket_endpoint)
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
 
+# Log the static directory path for debugging
+logger.info(f"Static directory path: {static_dir.absolute()}")
+
+# List files in the static directory
+if static_dir.exists():
+    logger.info(f"Files in static directory: {[f.name for f in static_dir.iterdir()]}")
+else:
+    logger.warning(f"Static directory does not exist: {static_dir.absolute()}")
+
 # Create assets directory if it doesn't exist
 assets_dir = static_dir / "assets"
 assets_dir.mkdir(exist_ok=True)
 
-# Mount static files only if the directory exists
+# Mount static files
 app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+# Mount the entire static directory to serve all static files
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Initialize MCP server
 mcp_server = FastMCP("ElevenLabs TTS")
@@ -84,13 +95,20 @@ def start_mcp_server():
 async def startup_event():
     # Start MCP server in a separate thread
     threading.Thread(target=start_mcp_server, daemon=True).start()
+    # Log the server URLs
+    logger.info(f"Backend server running at http://localhost:{PORT}")
+    logger.info(f"WebSocket server running at ws://localhost:{WS_PORT}")
+    logger.info(f"MCP server running at http://localhost:{MCP_PORT}/sse")
 
 @app.get("/")
 async def root():
     # Check if index.html exists in static directory
     index_path = static_dir / "index.html"
+    logger.info(f"Checking for index.html at: {index_path.absolute()}")
     if index_path.exists():
+        logger.info(f"Serving index.html from {index_path}")
         return FileResponse(str(index_path))
+    logger.warning("index.html not found in static directory")
     return {"status": "ok", "service": "elevenlabs-tts-mcp"}
 
 @app.get("/health")
@@ -112,7 +130,9 @@ async def serve_frontend(full_path: str):
     # Serve index.html for all other routes (SPA support)
     index_path = static_dir / "index.html"
     if index_path.exists():
+        logger.info(f"Serving index.html for path: {full_path}")
         return FileResponse(str(index_path))
     
     # If frontend is not built yet
+    logger.warning(f"Frontend not built yet, requested path: {full_path}")
     return {"status": "frontend_not_built", "message": "Frontend has not been built yet"} 

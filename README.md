@@ -14,18 +14,38 @@ cd elevenlabs-mcp
 # Create and configure your .env file
 cp .env.example .env
 # Edit .env file with your ElevenLabs API key
+```
 
-# Install dependencies and start the application
+### Starting the Backend
+
+```bash
+# Start the backend server using the start script
 chmod +x start.sh
 ./start.sh
 ```
 
 The `start.sh` script will:
-1. Build the frontend
+1. Build the frontend (but note: this is for production use only)
 2. Start the backend server
-3. Make the application available at http://localhost:9020 (web interface) and http://localhost:9022 (MCP server)
+3. Make the MCP server available at http://localhost:9022 for Cursor integration
 
-After starting, follow the "MCP Integration with Cursor" section below to connect to Cursor.
+### Starting the Frontend for Configuration
+
+For configuration and testing, you should run the frontend development server separately:
+
+```bash
+# In a new terminal window
+cd src/frontend
+npm install
+npm run dev
+```
+
+This will start the frontend development server at http://localhost:5173, which you can use to:
+- Configure your ElevenLabs settings
+- Test text-to-speech conversion
+- Change default voices and models
+
+After configuring through the frontend, you can use the MCP integration with Cursor as described below.
 
 ## Features
 
@@ -115,15 +135,24 @@ Once connected, you can use the following MCP tools in Cursor:
 
 The project includes a web interface for easy configuration and testing:
 
-1. Access the web interface at http://localhost:9020 after starting the server
-2. The web interface allows you to:
+1. Start the frontend development server:
+   ```bash
+   cd src/frontend
+   npm install
+   npm run dev
+   ```
+
+2. Access the web interface at http://localhost:5173
+
+3. The web interface allows you to:
    - Test text-to-speech conversion directly in your browser
    - Change the default voice and model
    - Adjust settings like auto-play and audio saving
    - View and manage your ElevenLabs configuration
 
-<img width="912" alt="image" src="https://github.com/user-attachments/assets/f563a372-3242-463e-9108-0426d2bf684f" />
+*Note: The backend server must be running for the web interface to function properly. The frontend will connect to the backend API at http://localhost:9020.*
 
+*Note: Screenshots of the web interface will be added to this README.*
 
 ## Configuration
 
@@ -151,11 +180,15 @@ You can configure the following settings in the `.env` file:
    - Error: "Address already in use"
    - Solution: Change the ports in the `.env` file if they conflict with other applications
 
-4. **Frontend Build Failures**
-   - Error: "Failed to build frontend"
-   - Solution: Make sure Node.js is installed and run `npm install` in the frontend directory before building
+4. **Frontend Development Server Issues**
+   - Error: "Failed to start frontend development server"
+   - Solution: Make sure Node.js is installed and run `npm install` in the frontend directory before running `npm run dev`
 
-5. **No Audio Output**
+5. **Frontend Cannot Connect to Backend**
+   - Error: "Failed to fetch" or "Network Error" in the frontend
+   - Solution: Ensure the backend server is running at http://localhost:9020 and check that the CORS settings allow connections from the frontend
+
+6. **No Audio Output**
    - Issue: Text is processed but no audio plays
    - Solution: Check your browser's audio settings and ensure auto-play is enabled in the configuration
 

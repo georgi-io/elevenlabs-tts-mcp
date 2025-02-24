@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       // Output to the FastAPI static directory when building for production
-      outDir: '../backend/static',
+      outDir: path.resolve(__dirname, '../backend/static'),
       emptyOutDir: true,
     },
   }
