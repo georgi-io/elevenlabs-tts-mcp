@@ -2,6 +2,31 @@
 
 This project integrates ElevenLabs Text-to-Speech capabilities with Cursor through the Model Context Protocol (MCP).
 
+## Quick Start
+
+For the fastest way to get up and running:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/elevenlabs-mcp.git
+cd elevenlabs-mcp
+
+# Create and configure your .env file
+cp .env.example .env
+# Edit .env file with your ElevenLabs API key
+
+# Install dependencies and start the application
+chmod +x start.sh
+./start.sh
+```
+
+The `start.sh` script will:
+1. Build the frontend
+2. Start the backend server
+3. Make the application available at http://localhost:9020 (web interface) and http://localhost:9022 (MCP server)
+
+After starting, follow the "MCP Integration with Cursor" section below to connect to Cursor.
+
 ## Features
 
 - Text-to-Speech conversion using ElevenLabs API
@@ -83,6 +108,19 @@ Once connected, you can use the following MCP tools in Cursor:
 4. Select "speak_text" to convert the selected text to speech
 5. You can also use "list_voices" to see available voices and "get_models" to see available models
 
+## Web Interface
+
+The project includes a web interface for easy configuration and testing:
+
+1. Access the web interface at http://localhost:9020 after starting the server
+2. The web interface allows you to:
+   - Test text-to-speech conversion directly in your browser
+   - Change the default voice and model
+   - Adjust settings like auto-play and audio saving
+   - View and manage your ElevenLabs configuration
+
+*Note: Screenshots of the web interface will be added to this README.*
+
 ## Configuration
 
 You can configure the following settings in the `.env` file:
@@ -92,6 +130,32 @@ You can configure the following settings in the `.env` file:
 - `WS_PORT`: Port for WebSocket connections (default: 9021)
 - `MCP_PORT`: Port for the MCP server (default: 9022)
 - `DEFAULT_VOICE_ID`: Default voice ID to use for text-to-speech
+
+## Troubleshooting
+
+### Common Issues
+
+1. **API Key Issues**
+   - Error: "Invalid API key"
+   - Solution: Ensure your ElevenLabs API key is correctly set in the `.env` file
+
+2. **Connection Problems**
+   - Error: "Cannot connect to MCP server"
+   - Solution: Make sure the backend server is running and the MCP URL in Cursor settings is correct (http://localhost:9022/sse)
+
+3. **Port Conflicts**
+   - Error: "Address already in use"
+   - Solution: Change the ports in the `.env` file if they conflict with other applications
+
+4. **Frontend Build Failures**
+   - Error: "Failed to build frontend"
+   - Solution: Make sure Node.js is installed and run `npm install` in the frontend directory before building
+
+5. **No Audio Output**
+   - Issue: Text is processed but no audio plays
+   - Solution: Check your browser's audio settings and ensure auto-play is enabled in the configuration
+
+For additional help, please open an issue on the GitHub repository.
 
 ## License
 
