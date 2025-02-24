@@ -7,7 +7,7 @@ A Cursor MCP (Machine Control Protocol) application that converts text output in
 
 ### 1. Backend Service
 - Node.js based application
-- ElevenLabs API integration (SDK v1.6.0)
+- MCP SDK integration (@modelcontextprotocol/sdk v1.6.0)
 - Environment configuration management (`.env` support)
 - Configuration file handling for persistent settings
 - API endpoint for Text-to-Speech conversion
