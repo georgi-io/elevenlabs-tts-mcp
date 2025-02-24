@@ -91,4 +91,10 @@ log/
 # Project specific
 generated/
 cache/
-.mcp/ 
+.mcp/
+
+# Frontend build output in backend
+src/backend/static/
+
+# Frontend build
+src/frontend/dist/ 

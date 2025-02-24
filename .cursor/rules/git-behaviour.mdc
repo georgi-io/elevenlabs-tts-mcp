@@ -1,0 +1,58 @@
+---
+description: Rules for git usage, git prompting and tooling
+globs: **/*
+alwaysApply: true
+---
+# Git
+- Always use the GitHub CLI (GH) to interact with git when possible, it is connected and authorized for this project.
+- Always do things YOLO, but DON'T EVER PUSH TO GIT AUTOMATICALLY
+- Follow the rules below regarding prompts and diff-checking
+- Always use temporary markdowns as input for GH, don't try to encounter newline problems for the bazillion'th time!
+
+# Development Tools
+
+This directory contains various development and productivity tools used in the project. These tools are designed to help developers and product managers with common tasks and maintain consistency across the codebase.
+
+
+## Directory Structure
+
+```
+.dev-tools/
+├── prompts/           # AI prompt templates for various tasks
+│   ├── prompt_pr.md   # PR description generation template
+│   └── prompt_user_story.md # User story generation template
+```
+
+## Tools Overview
+
+### Prompts
+
+The `prompts/` directory contains templates for AI-assisted tasks:
+
+- `prompt_pr.md`: Template for generating detailed pull request descriptions
+- `prompt_user_story.md`: Template for creating well-structured user stories as GitHub issues
+
+### Workflow: Creating Pull Requests with AI
+
+1. Ensure correct comparison branch:
+   - Check `.env` file in scripts directory
+   - By default, it's set to `origin/main` for normal feature PRs
+
+2. Generate the git diffs:
+   ```bash
+   cd .dev-tools/scripts
+   poetry run python generate_git_diffs.py
+   ```
+
+3. In Cursor's Composer:
+   - Reference or drag in `prompt_pr.md`
+   - Reference or drag in `TEMP_GIT_pr_diff.txt`
+   - Reference or drag in `TEMP_GIT_pr_commit_messages.txt`
+   - Click Submit
+   - Cursor will generate a detailed PR description based on your changes and commit history
+
+### Tips
+
+- The default target branch is `main` as most PRs should go there
+- The generated files in `temp_output` are temporary and will be overwritten on each run
+- You can reference these files in any Cursor Composer chat to generate commit messages or PR descriptions

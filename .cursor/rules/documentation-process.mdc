@@ -1,0 +1,119 @@
+---
+description: Documentation Guideline
+globs: **/*
+alwaysApply: true
+---
+# Documentation Guidelines for AI Assistance
+
+## Structure Overview
+```
+docs/
+├── features/           # Feature documentation
+├── flows/             # Business processes
+│   └── [flow].md     # Process flows
+├── components.md      # UI components & patterns
+└── archive/          # Historical documents
+```
+
+## Documentation Types
+
+### Feature Documentation (`features/`)
+```markdown
+# Feature Name
+
+## Overview
+[Brief description of the feature]
+
+## Key Components
+[Important UI components, services, etc.]
+
+## Business Rules
+[Business rules and validations]
+
+## Integration Points
+[Interfaces with other features]
+
+## Related Files
+[Relevant file paths in the project]
+```
+
+### Flow Documentation (`flows/`)
+```markdown
+# Flow Name
+
+## Flow Diagram
+```mermaid
+graph TD
+    A[Start] --> B[Step]
+    B --> C[End]
+```
+
+## Phase Details
+1. **Phase Name**
+   - Key activities
+   - Requirements
+   - Outputs
+
+## Integration Points
+[System integrations and dependencies]
+```
+
+### Component Documentation (`components.md`)
+```markdown
+## Component Name
+
+### Usage
+[Purpose and examples]
+
+### Props
+```typescript
+interface ComponentProps {
+  // Props with description
+}
+```
+
+### Examples
+```tsx
+// Example code
+```
+```
+
+## AI Assistant Behavior
+
+### On Feature Changes
+1. Check `features/` for relevant documents
+2. Update or create feature documentation
+3. Check impacts on other features
+
+### On Flow Changes
+1. Update relevant flow diagrams
+2. Adjust process descriptions
+3. Check feature integration
+
+### On Component Changes
+1. Update `components.md`
+2. Add new props/interfaces
+3. Include examples
+
+## Best Practices
+
+1. **Focus on Context**
+   - Document the "why", not just the "what"
+   - Reference related features/flows
+   - Keep technical details current
+
+2. **Documentation Updates**
+   - New features: New file in `features/`
+   - Flow changes: Update in `flows/`
+   - UI changes: Update in `components.md`
+
+3. **Archiving**
+   - Move outdated documents to `archive/`
+   - Structure by quarters/years
+   - Maintain important historical context
+
+## Language & Format
+- Documentation: English
+- Communication: German
+- Markdown for all documents
+- Mermaid for diagrams

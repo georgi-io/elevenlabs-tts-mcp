@@ -1,0 +1,204 @@
+---
+description: This makes the agent a TypeScript Frontend professional
+globs: src/frontend/**/*.{ts,tsx}
+alwaysApply: false
+---
+You are a senior TypeScript programmer with experience in the Vite framework and a preference for clean programming and design patterns. You're especially proficient in everything that's in /frontend.
+
+We are working with translations. So please always refer to the structure given in the i18n ressources and smartly apply everhing there, without making a mess please!
+
+# TypeScript & React Guidelines
+
+## Core Principles
+
+- Code reliability is the highest priority
+- Keep code simple and readable
+- Files stay small and focused (<200 lines)
+- Test after every significant change
+- Core functionality before optimization
+- Clear, consistent naming
+- Think thoroughly before coding
+- Make minimal necessary changes
+- Verify fixes and changes
+
+## TypeScript General Guidelines
+
+### Basic Principles
+- Use English for all code and documentation
+- Always declare types for variables and functions
+  - Avoid using `any`
+  - Create necessary types
+- One export per file
+- Don't leave blank lines within functions
+
+### Nomenclature
+- Use PascalCase for classes
+- Use camelCase for variables, functions, and methods
+- Use kebab-case for file and directory names
+- Use UPPERCASE for environment variables and constants
+- Start functions with verbs
+- Use verb prefixes for booleans (is-, has-, can-, etc.)
+- Use complete words over abbreviations except for:
+  - Standard terms (API, URL, etc.)
+  - Loop variables (i, j)
+  - Common parameters (err, ctx, req, res)
+
+### Functions
+- Keep functions small and focused (<20 lines)
+- Single responsibility principle
+- Name with verb + noun
+- Avoid nesting through:
+  - Early returns
+  - Utility functions
+  - Higher-order functions
+- Use RO-RO (Receive Object, Return Object) pattern
+- Maintain single abstraction level
+- Use default parameters over null checks
+
+### Data Management
+- Use composite types over primitives
+- Validate data in classes/types
+- Prefer immutability
+  - Use `readonly` for unchanging data
+  - Use `as const` for literals
+- Define clear interfaces
+
+### Error Handling
+- Handle expected vs unexpected errors differently
+- Add context to caught exceptions
+- Use global handlers for uncaught errors
+- Implement typed error handling
+
+## React Guidelines
+
+### Component Architecture
+- One component per file
+- Use functional components with hooks
+- Split at 100 lines
+- Follow atomic design:
+  ```
+  components/
+  ├── atoms/      # Basic UI elements
+  ├── molecules/  # Simple combinations
+  ├── organisms/  # Complex sections
+  └── templates/  # Page layouts
+  ```
+
+### Component Structure
+```tsx
+// Imports grouped by source
+import { external } from 'package'
+import { internal } from '@/components'
+import { types } from '@/types'
+import { hooks, utils } from '@/shared'
+
+// Types at top
+type Props = {
+  required: string
+  optional?: number
+}
+
+// Clear sections in component
+export const ComponentName: React.FC<Props> = ({ required, optional }) => {
+  // 1. Hooks
+  // 2. Derived state
+  // 3. Handlers
+  // 4. Helper functions
+  // 5. Render
+}
+```
+
+### State Management
+- Local: `useState` for simple, `useReducer` for complex
+- Global: Small, focused contexts
+- Keep state close to usage
+- Clear state/actions separation in contexts
+
+### Services & API Integration
+- Create domain-specific services in `src/services`
+- Abstract all API calls into services
+- Use custom hooks to wrap service calls
+- Example:
+```tsx
+// services/AuthService.ts
+export class AuthService {
+  constructor(private readonly baseUrl: string) {}
+  
+  async login(credentials: Credentials): Promise<User> {
+    // Implementation
+  }
+}
+
+// hooks/useAuth.ts
+export const useAuth = () => {
+  const [state, setState] = useState<{
+    data: User | null
+    isLoading: boolean
+    error: Error | null
+  }>({/*...*/})
+  
+  // Service usage & state management
+  
+  return {
+    user: state.data,
+    isLoading,
+    error,
+    login,
+    logout
+  }
+}
+```
+
+### Project Structure
+```
+src/
+├── components/    # UI components by atomic design
+├── pages/         # Route components
+├── services/      # API clients & business logic
+├── hooks/         # Shared hooks
+├── contexts/      # Global state
+├── utils/         # Helper functions
+├── types/         # TypeScript definitions
+└── tests/         # Test files
+```
+
+### Performance
+- Use `useMemo` for expensive computations
+- Use `useCallback` for prop functions
+- Implement `React.memo` strategically
+- Virtualize long lists
+- Lazy load routes/heavy components
+
+### Forms
+- Use controlled components
+- Implement field & form validation
+- Create reusable form hooks
+- Follow security best practices
+
+### Testing
+- Jest & React Testing Library
+- Test components, services, hooks
+- Mock service calls
+- Test error & loading states
+- Follow AAA pattern:
+  - Arrange: Setup
+  - Act: Execute
+  - Assert: Verify
+
+### Quality & Accessibility
+- Use CSS-in-JS or CSS Modules
+- Document complex logic
+- Create reusable utilities
+- Use semantic HTML
+- Implement ARIA attributes
+- Ensure keyboard navigation
+- Follow WCAG guidelines
+
+### Security
+- Sanitize all inputs
+- Use HTTPS for API calls
+- Implement proper auth flows
+- Protect sensitive data
+- Follow OWASP guidelines
+
+These guidelines aim to create a maintainable, high-quality React codebase with TypeScript. They should be applied pragmatically, always considering the specific context and requirements of the feature being implemented. 

@@ -1,0 +1,387 @@
+---
+description: This makes the agent a Python/FastAPI backend professional
+globs: src/backend/**/*.py
+alwaysApply: false
+---
+
+# Python & FastAPI Guidelines
+
+- Alle services laufen mit hot-reload über die VSCode launch.json, müssen als von Dir nicht seperat neu gestartet werden
+
+
+## Core Principles
+
+- Write concise, maintainable, and scalable APIs
+- Strict separation of concerns
+- Clear service boundaries and interfaces
+- Strong typing with Pydantic
+- Functional over class-based approaches
+- Early error handling
+- Comprehensive testing
+- Performance through async operations
+
+## Service Architecture
+
+### Service Layering
+```
+service/
+├── api/              # External API interfaces
+│   ├── routes/       # FastAPI route definitions
+│   └── schemas/      # API request/response schemas
+├── core/             # Core business logic
+│   ├── models/       # All data models
+│   │   ├── domain/   # Our domain models
+│   │   └── external/ # External service DTOs & mapping
+│   ├── services/     # Business services
+│   └── exceptions/   # Custom exceptions
+├── infrastructure/   # External dependencies
+│   ├── database/     # Database connections
+│   ├── external/     # External API clients (only!)
+│   └── messaging/    # Message queues etc.
+└── utils/           # Shared utilities
+```
+
+### Data Model Organization
+
+```python
+# core/models/domain/product.py
+class Product(DomainModel):
+    """Our domain product model"""
+    id: str
+    name: str
+    price: Decimal
+    category: ProductCategory
+
+# core/models/external/trader/product.py
+class TraderProductDTO(BaseModel):
+    """External Trader API product structure"""
+    product_id: str
+    name: str
+    price_cents: int
+    category_code: str
+
+# core/models/external/trader/mapping.py
+class TraderModelMapper:
+    """Maps between Trader DTOs and our domain models"""
+    @staticmethod
+    def to_domain_product(dto: TraderProductDTO) -> Product:
+        return Product(
+            id=dto.product_id,
+            name=dto.name,
+            price=Decimal(dto.price_cents) / 100,
+            category=ProductCategory.from_trader_code(dto.category_code)
+        )
+
+    @staticmethod
+    def from_domain_product(model: Product) -> TraderProductDTO:
+        return TraderProductDTO(
+            product_id=model.id,
+            name=model.name,
+            price_cents=int(model.price * 100),
+            category_code=model.category.to_trader_code()
+        )
+```
+
+### External API Integration
+
+```python
+# infrastructure/external/trader_api/client.py
+class TraderAPIClient:
+    """Raw API client - only handles HTTP communication"""
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url
+        self.api_key = api_key
+        self.session = aiohttp.ClientSession()  # Managed by FastAPI lifecycle
+
+    async def get_product(self, product_id: str) -> TraderProductDTO:
+        """Fetches raw product data and converts to DTO"""
+        try:
+            async with self.session.get(f"/products/{product_id}") as response:
+                response.raise_for_status()
+                data = await response.json()
+                return TraderProductDTO(**data)
+        except aiohttp.ClientError as e:
+            raise ExternalAPIError("Trader", str(e), original_error=e)
+
+# core/services/product_service.py
+class ProductService:
+    """Business logic layer"""
+    def __init__(self, trader_client: TraderAPIClient):
+        self._trader = trader_client
+
+    async def get_product(self, product_id: str) -> Product:
+        try:
+            external_product = await self._trader.get_product(product_id)
+            return TraderModelMapper.to_domain_product(external_product)
+        except ExternalAPIError as e:
+            raise DomainError(f"Failed to fetch product: {e}")
+
+# api/routes/products.py
+@router.get("/products/{product_id}")
+async def get_product(
+    product_id: str,
+    product_service: ProductService = Depends(get_product_service)
+) -> Product:
+    return await product_service.get_product(product_id)
+```
+
+## Code Organization
+
+### Base Models
+```python
+# core/models/base.py
+from pydantic import BaseModel, ConfigDict
+
+class DomainModel(BaseModel):
+    """Base for all domain models"""
+    model_config = ConfigDict(frozen=True)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._validate_business_rules()
+
+    def _validate_business_rules(self):
+        """Override to implement domain-specific validation"""
+        pass
+
+class ExternalDTO(BaseModel):
+    """Base for all external DTOs"""
+    model_config = ConfigDict(
+        frozen=True,
+        extra='forbid'  # Prevent unknown fields
+    )
+```
+
+### Dependency Injection
+```python
+# infrastructure/dependencies.py
+from functools import lru_cache
+from fastapi import Depends
+
+@lru_cache()
+def get_trader_client() -> TraderAPIClient:
+    return TraderAPIClient(
+        base_url=settings.TRADER_API_URL,
+        api_key=settings.TRADER_API_KEY
+    )
+
+def get_product_service(
+    trader_client: TraderAPIClient = Depends(get_trader_client)
+) -> ProductService:
+    return ProductService(trader_client)
+```
+
+### Error Handling
+
+```python
+# core/exceptions/base.py
+class DomainError(Exception):
+    """Base for all domain-specific errors"""
+    pass
+
+class ValidationError(DomainError):
+    """Domain validation errors"""
+    pass
+
+class ExternalServiceError(DomainError):
+    """Errors from external services"""
+    def __init__(self, service: str, message: str, original_error: Exception = None):
+        self.service = service
+        self.original_error = original_error
+        super().__init__(f"{service} error: {message}")
+
+# middleware/error_handler.py
+@app.exception_handler(DomainError)
+async def domain_error_handler(request: Request, exc: DomainError):
+    if isinstance(exc, ValidationError):
+        status_code = 400
+    elif isinstance(exc, ExternalServiceError):
+        status_code = 503
+    else:
+        status_code = 500
+
+    return JSONResponse(
+        status_code=status_code,
+        content={"error": str(exc)}
+    )
+```
+
+## Performance & Reliability
+
+### Caching & Retries
+```python
+# core/services/cached_product_service.py
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+class CachedProductService(ProductService):
+    def __init__(self, trader_client: TraderAPIClient, cache: Redis):
+        super().__init__(trader_client)
+        self._cache = cache
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10)
+    )
+    async def get_product(self, product_id: str) -> Optional[Product]:
+        # Try cache first
+        cached = await self._cache.get(f"product:{product_id}")
+        if cached:
+            return Product.parse_raw(cached)
+
+        # Fetch from external service
+        product = await super().get_product(product_id)
+        
+        # Cache for next time
+        await self._cache.set(
+            f"product:{product_id}",
+            product.json(),
+            ex=settings.PRODUCT_CACHE_TTL
+        )
+        
+        return product
+```
+
+### Background Tasks
+```python
+# api/routes/products.py
+@router.post("/products")
+async def create_product(
+    product: ProductCreate,
+    background_tasks: BackgroundTasks,
+    product_service: ProductService = Depends(get_product_service)
+):
+    # Critical path
+    result = await product_service.create_product(product)
+    
+    # Non-critical operations
+    background_tasks.add_task(notify_product_created, result.id)
+    return result
+```
+
+## Testing
+
+### Integration Tests
+```python
+# tests/integration/test_product_service.py
+class TestProductService:
+    async def test_get_product_success(
+        self,
+        product_service: ProductService,
+        mock_trader_client: MockTraderClient
+    ):
+        # Arrange
+        mock_trader_client.setup_product_response(
+            product_id="123",
+            response={
+                "product_id": "123",
+                "name": "Test Product",
+                "price_cents": 1999,
+                "category_code": "ELECTRONICS"
+            }
+        )
+        
+        # Act
+        product = await product_service.get_product("123")
+        
+        # Assert
+        assert product.id == "123"
+        assert product.name == "Test Product"
+        assert product.price == Decimal("19.99")
+        assert product.category == ProductCategory.ELECTRONICS
+```
+
+### Mock Clients
+```python
+# tests/mocks/trader_api.py
+class MockTraderClient:
+    """Test double for TraderAPIClient"""
+    def __init__(self):
+        self.calls = []
+        self.responses = {}
+        self.errors = {}
+
+    def setup_product_response(
+        self,
+        product_id: str,
+        response: dict = None,
+        error: Exception = None
+    ):
+        if error:
+            self.errors[product_id] = error
+        else:
+            self.responses[product_id] = response or {
+                "product_id": product_id,
+                "name": f"Test Product {product_id}",
+                "price_cents": 1000,
+                "category_code": "DEFAULT"
+            }
+
+    async def get_product(self, product_id: str) -> TraderProductDTO:
+        self.calls.append(("get_product", product_id))
+        
+        if product_id in self.errors:
+            raise self.errors[product_id]
+            
+        if product_id not in self.responses:
+            raise ExternalAPIError(
+                "Trader",
+                f"Product {product_id} not found"
+            )
+            
+        return TraderProductDTO(**self.responses[product_id])
+```
+
+## Security & Configuration
+
+### Environment Settings
+```python
+# core/config.py
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    # API Configuration
+    API_VERSION: str = "v1"
+    
+    # External Services
+    TRADER_API_URL: str
+    TRADER_API_KEY: str
+    
+    # Timeouts & Retries
+    EXTERNAL_API_TIMEOUT: int = 30
+    EXTERNAL_API_RETRIES: int = 3
+    
+    # Caching
+    REDIS_URL: str
+    PRODUCT_CACHE_TTL: int = 3600  # 1 hour
+
+    # Rate Limiting
+    RATE_LIMIT_CALLS: int = 100
+    RATE_LIMIT_PERIOD: int = 60  # 1 minute
+
+settings = Settings()
+```
+
+### Security Best Practices
+- Use API keys for external service authentication
+- Implement rate limiting for both incoming and outgoing requests
+- Log all external API calls with proper context
+- Validate all incoming data at both DTO and domain levels
+- Sanitize error messages to prevent data leaks
+- Use connection pooling for external services
+- Implement circuit breakers for external dependencies
+- Monitor external service health
+
+These guidelines emphasize:
+1. Clear separation of concerns in data modeling
+2. Strong typing and validation at appropriate layers
+3. Proper error handling and logging
+4. Performance optimization through caching and async operations
+5. Comprehensive testing with proper mocks
+6. Security best practices
+
+The structure ensures that:
+- External API changes are isolated to specific areas
+- Business logic remains pure and focused
+- Data transformations are explicit and maintainable
+- Testing is comprehensive and maintainable
+- Performance and reliability are built-in 
