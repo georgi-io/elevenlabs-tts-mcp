@@ -4,17 +4,22 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import yaml
 import os
+import threading
+import asyncio
 from dotenv import load_dotenv
 from pathlib import Path
 from .routes import router
 from .websocket import websocket_endpoint
 from mcp.server.fastmcp import FastMCP
 from starlette.responses import Response
-from starlette.routing import Mount
-from starlette.applications import Starlette
 
 # Load environment variables
 load_dotenv()
+
+# Get port configurations from environment variables
+PORT = int(os.getenv("PORT", 9020))
+WS_PORT = int(os.getenv("WS_PORT", 9021))
+MCP_PORT = int(os.getenv("MCP_PORT", 9022))
 
 app = FastAPI(
     title="ElevenLabs TTS MCP",
@@ -60,14 +65,20 @@ app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
 # Initialize MCP server
 mcp_server = FastMCP("ElevenLabs TTS")
+# Configure MCP server to use the port from environment variables
+mcp_server.settings.port = MCP_PORT
 from .mcp_tools import register_mcp_tools
 register_mcp_tools(mcp_server)
 
-# Add MCP SSE endpoint
-@app.get("/mcp/sse")
-async def mcp_sse(request: Request):
-    """MCP SSE endpoint for Cursor integration."""
-    return await mcp_server.run_sse_async(request)
+# Start MCP server in a separate thread
+def start_mcp_server():
+    asyncio.run(mcp_server.run_sse_async())
+
+# Start the MCP server in a background thread when the app starts
+@app.on_event("startup")
+async def startup_event():
+    # Start MCP server in a separate thread
+    threading.Thread(target=start_mcp_server, daemon=True).start()
 
 @app.get("/")
 async def root():

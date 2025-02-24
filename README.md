@@ -1,129 +1,97 @@
-# ElevenLabs Text-to-Speech MCP Integration
+# ElevenLabs Text-to-Speech MCP
 
-A Cursor MCP (Machine Control Protocol) application that converts text output into spoken words using the ElevenLabs Text-to-Speech API.
+This project integrates ElevenLabs Text-to-Speech capabilities with Cursor through the Model Context Protocol (MCP).
 
 ## Features
 
-- FastAPI backend with direct MCP integration via SSE
-- React + TypeScript frontend with Material UI
-- Real-time text-to-speech conversion
-- Voice selection and preview
-- Cursor MCP integration
+- Text-to-Speech conversion using ElevenLabs API
+- Voice selection and management
+- MCP integration for Cursor
+- Web interface for testing and configuration
 
 ## Requirements
 
 - Python 3.11+
-- Poetry for dependency management
-- Node.js 18+ and npm for frontend development
-- ElevenLabs API key
+- Poetry (for dependency management)
+- Node.js 18+ (for frontend development)
+- Cursor (for MCP integration)
 
 ## Installation
 
+### Backend
+
 ```bash
-# Install backend dependencies
+# Install dependencies
 poetry install
 
-# Create .env file and add your ElevenLabs API key
-echo "ELEVENLABS_API_KEY=your-api-key-here" > .env
+# Create .env file
+cp .env.example .env
+# Edit .env file with your ElevenLabs API key
+```
 
-# Install frontend dependencies
-cd src/frontend
+### Frontend
+
+```bash
+# Install dependencies
+cd frontend
 npm install
 ```
 
 ## Development
 
-The project can be developed in two different ways:
-
-### Development Mode (Separate Servers)
-
-In this mode, frontend and backend run as separate servers:
-
-#### Backend
+### Running the backend server
 
 ```bash
-# Run the backend server
-poetry run uvicorn src.backend.app:app --reload
+# Start the backend server
+python -m src.backend
 ```
 
-The backend server runs on the port configured in the `.env` file (default is 9020).
+The backend server will start on http://localhost:9020 and the MCP server will start on http://localhost:9022.
 
-#### Frontend
+### Running the frontend server
 
 ```bash
-# Run the frontend development server
-cd src/frontend
+# Start the frontend server
+cd frontend
 npm run dev
 ```
 
-The frontend development server runs on its own port (default is 5173) and forwards API requests to the backend server through a proxy. This enables hot-reloading and other development tools.
+The frontend server will start on http://localhost:5173.
 
-### Production Mode (All-in-One)
+## MCP Integration with Cursor
 
-For production or testing purposes, the entire project can be started with a single command:
+To connect the MCP server to Cursor:
 
-```bash
-# Build and start the entire application
-./start.sh
-```
-
-This script builds the frontend and copies it to the backend directory, then starts the backend server which serves both the API as well as the static frontend files.
-
-### Manual Build
-
-```bash
-# Build the frontend
-cd src/frontend
-npm run build
-
-# Start the server
-cd ../..
-poetry run uvicorn src.backend.app:app
-```
-
-### MCP Integration
-
-The backend server includes direct MCP integration via Server-Sent Events (SSE), allowing Cursor to communicate directly with the backend without requiring a separate binary.
-
-#### MCP Commands
-
-The MCP integration supports the following commands:
-
-- `speak_text`: Converts selected text to speech
-- `list_voices`: Lists all available voices
-- `get_models`: Gets available TTS models
-
-#### Usage in Cursor
-
-1. Start the backend server: `poetry run uvicorn src.backend.app:app`
-2. In Cursor, go to Settings > MCP Servers
-3. Add a new MCP server with the following configuration:
+1. Make sure the backend server is running with `python -m src.backend`
+2. Open Cursor and go to Settings (gear icon or Cmd+, on Mac, Ctrl+, on Windows/Linux)
+3. Navigate to the "MCP" section
+4. Add a new MCP server with:
    - Name: ElevenLabs TTS
-   - Command: `curl -N http://localhost:9020/mcp/sse`
-4. In Cursor, select text you want to convert to speech
-5. Use the MCP tool `speak_text` to convert the selected text to speech
+   - Type: SSE
+   - URL: http://localhost:9022/sse
+
+5. Save the configuration
+6. You should see a green checkmark indicating a successful connection
+
+### Using MCP Tools in Cursor
+
+Once connected, you can use the following MCP tools in Cursor:
+
+1. Select text you want to convert to speech
+2. Open the command palette (Cmd+Shift+P on Mac, Ctrl+Shift+P on Windows/Linux)
+3. Type "MCP" to see available tools
+4. Select "speak_text" to convert the selected text to speech
+5. You can also use "list_voices" to see available voices and "get_models" to see available models
 
 ## Configuration
 
-The application is configured through the `.env` file:
+You can configure the following settings in the `.env` file:
 
-```
-# ElevenLabs API Configuration
-ELEVENLABS_API_KEY=your-api-key-here
-
-# Server Configuration
-HOST=127.0.0.1
-PORT=9020
-LOG_LEVEL=INFO
-
-# WebSocket Configuration
-WS_HOST=127.0.0.1
-WS_PORT=9021
-
-# Development Settings
-DEBUG=false
-RELOAD=true
-```
+- `ELEVENLABS_API_KEY`: Your ElevenLabs API key
+- `PORT`: Port for the main backend server (default: 9020)
+- `WS_PORT`: Port for WebSocket connections (default: 9021)
+- `MCP_PORT`: Port for the MCP server (default: 9022)
+- `DEFAULT_VOICE_ID`: Default voice ID to use for text-to-speech
 
 ## License
 
