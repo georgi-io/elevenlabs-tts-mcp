@@ -1,7 +1,79 @@
 import { useState, useEffect } from 'react'
-import { FaPlay, FaStop, FaMicrophone } from 'react-icons/fa'
+import {
+  Container,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Box,
+  Alert,
+  IconButton,
+  CircularProgress,
+  Divider,
+  useTheme,
+  ThemeProvider,
+  createTheme,
+  CssBaseline
+} from '@mui/material'
+import {
+  PlayArrow as PlayIcon,
+  Stop as StopIcon,
+  RecordVoiceOver as MicIcon,
+  VolumeUp as VolumeIcon
+} from '@mui/icons-material'
 import apiService, { Voice } from './services/api'
-import './App.css'
+
+// Create a custom theme
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#6366f1', // Indigo color
+    },
+    secondary: {
+      main: '#10b981', // Emerald color
+    },
+    background: {
+      default: '#f3f4f6',
+      paper: '#ffffff',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+  },
+  shape: {
+    borderRadius: 8,
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 500,
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        },
+      },
+    },
+  },
+})
 
 function App() {
   const [text, setText] = useState('')
@@ -70,87 +142,103 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="p-8">
-          <div className="flex items-center justify-center mb-6">
-            <FaMicrophone className="text-indigo-600 text-3xl mr-3" />
-            <h1 className="text-2xl font-bold text-gray-900">ElevenLabs Text-to-Speech</h1>
-          </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+          <Box display="flex" alignItems="center" justifyContent="center" mb={3}>
+            <MicIcon color="primary" sx={{ fontSize: 36, mr: 1.5 }} />
+            <Typography variant="h4" component="h1" color="primary.main">
+              ElevenLabs Text-to-Speech
+            </Typography>
+          </Box>
+          
+          <Divider sx={{ mb: 3 }} />
           
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-              <p className="text-red-700">{error}</p>
-            </div>
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
           )}
           
-          <div className="mb-6">
-            <label htmlFor="voice-select" className="block text-sm font-medium text-gray-700 mb-2">
-              Select Voice
-            </label>
-            <select
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="voice-select-label">Select Voice</InputLabel>
+            <Select
+              labelId="voice-select-label"
               id="voice-select"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               value={selectedVoice}
+              label="Select Voice"
               onChange={(e) => setSelectedVoice(e.target.value)}
             >
               {voices.map((voice) => (
-                <option key={voice.voice_id} value={voice.voice_id}>
+                <MenuItem key={voice.voice_id} value={voice.voice_id}>
                   {voice.name}
-                </option>
+                </MenuItem>
               ))}
-            </select>
-          </div>
+            </Select>
+          </FormControl>
           
-          <div className="mb-6">
-            <label htmlFor="text-input" className="block text-sm font-medium text-gray-700 mb-2">
-              Text to Convert
-            </label>
-            <textarea
-              id="text-input"
-              rows={5}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Enter text to convert to speech..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-          </div>
+          <TextField
+            id="text-input"
+            label="Text to Convert"
+            multiline
+            rows={5}
+            fullWidth
+            margin="normal"
+            placeholder="Enter text to convert to speech..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            variant="outlined"
+          />
           
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          <Box display="flex" justifyContent="space-between" alignItems="center" mt={3}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <VolumeIcon />}
               onClick={handleTextToSpeech}
               disabled={isLoading || !text.trim()}
             >
               {isLoading ? 'Converting...' : 'Convert to Speech'}
-            </button>
+            </Button>
             
             {audioUrl && (
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              <Box>
+                <IconButton
+                  color="primary"
+                  size="large"
                   onClick={() => playAudio(audioUrl)}
                   disabled={isPlaying}
+                  sx={{ mr: 1 }}
                 >
-                  <FaPlay className="mr-2" /> Play
-                </button>
+                  <PlayIcon />
+                </IconButton>
+                
                 {isPlaying && (
-                  <button
-                    type="button"
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  <IconButton
+                    color="secondary"
+                    size="large"
                     onClick={stopAudio}
                   >
-                    <FaStop className="mr-2" /> Stop
-                  </button>
+                    <StopIcon />
+                  </IconButton>
                 )}
-              </div>
+              </Box>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
+          </Box>
+          
+          {audioUrl && (
+            <Box mt={3} p={2} bgcolor="background.default" borderRadius={1}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Audio Preview
+              </Typography>
+              <audio controls src={audioUrl} style={{ width: '100%' }} />
+            </Box>
+          )}
+        </Paper>
+      </Container>
+    </ThemeProvider>
   )
 }
 
