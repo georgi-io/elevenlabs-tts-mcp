@@ -1,52 +1,56 @@
-# ElevenLabs Text-to-Speech MCP Integration
-
-## Project Overview
-A Cursor MCP (Machine Control Protocol) application that converts text output into spoken words using the ElevenLabs Text-to-Speech API. The system consists of three main components: a backend service, a web interface, and an MCP binary for Cursor integration.
-
-## Core Components
-
-### 1. Backend Service
-- ✅ Python-based FastAPI application
-- ⏳ MCP SDK integration (@modelcontextprotocol/sdk v1.6.0 via Python bindings)
-- ✅ Environment configuration management (python-dotenv)
-- ✅ Configuration file handling for persistent settings (PyYAML)
-- ✅ API endpoint for Text-to-Speech conversion
-- ⏳ Event routing between components using asyncio
-- ⏳ WebSocket support for real-time communication
-
-### 2. Web Interface
-- ✅ Standalone web UI (served via FastAPI)
-- ✅ Text-to-Speech testing functionality
-- ✅ Voice selection and preview capabilities
-- ✅ Real-time display of TTS responses
-- ⏳ WebSocket connection for live updates
-- ⏳ Event listener for MCP commands
-
-### 3. MCP Binary
-- ✅ Standalone Python executable
-- ⏳ MCP command integration for Cursor
-- ⏳ Communication with backend service via HTTP/WebSocket
-- 🎯 Text-to-Speech command handling
-- ⏳ Async operation support
+# ElevenLabs Text-to-Speech MCP Integration Requirements
 
 ## System Architecture
-- ✅ FastAPI backend handles routing and WebSocket connections
-- ✅ Web UI runs as static assets served by FastAPI
-- ⏳ MCP Binary acts as bridge between Cursor and backend
-- ✅ Event-driven communication using asyncio and WebSockets
-- ✅ Asynchronous TTS processing with background tasks
+
+The system consists of the following components:
+
+1. ✅ **Backend Service with MCP Integration**: Handles the Text-to-Speech conversion and MCP communication
+   - ✅ FastAPI-based REST API
+   - ✅ Direct MCP integration via SSE
+   - ✅ Text-to-Speech command handling
+   - ✅ Integration with ElevenLabs API
+   - ✅ Voice management
+   - ✅ Async operation support
+
+2. ⏳ **Frontend**: Web interface for configuration and testing
+   - ✅ React + TypeScript
+   - ✅ Material UI components
+   - ⏳ Voice selection and preview
+   - ⏳ Configuration management
 
 ## Technical Requirements
-- ✅ Python 3.11+ runtime environment
-- ✅ FastAPI for backend services
-- ✅ ElevenLabs API key configuration
-- ✅ Browser compatibility for Web UI
-- ⏳ Cursor MCP protocol support
-- ✅ Local configuration persistence using YAML
-- ✅ Poetry for dependency management
 
-## Legend
-- ✅ Completed
-- 🔄 Modified/Adapted
-- ⏳ In Progress/To Do
-- 🎯 Planned 
+### Backend Service with MCP Integration
+
+- ✅ Implement the MCP SDK integration directly in the backend
+- ✅ Support for Cursor MCP protocol via SSE
+- ✅ Command handling for text-to-speech conversion
+- ✅ Configuration management
+- ✅ ElevenLabs API integration
+- ✅ Voice management
+- ✅ Audio caching
+
+### Frontend
+
+- ✅ React + TypeScript
+- ✅ Material UI components
+- ⏳ Voice selection interface
+- ⏳ Configuration management
+- ⏳ Audio playback
+
+## Functional Requirements
+
+### Backend Service with MCP Integration
+
+- ✅ Convert selected text in Cursor to speech
+- ✅ List available voices
+- ✅ Provide REST API for TTS conversion
+- ✅ Voice management
+- ✅ Configuration management
+
+### Frontend
+
+- ⏳ Select and preview voices
+- ⏳ Configure TTS settings
+- ⏳ Test TTS conversion
+- ⏳ Monitor MCP status 

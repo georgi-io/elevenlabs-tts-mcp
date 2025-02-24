@@ -4,8 +4,8 @@ A Cursor MCP (Machine Control Protocol) application that converts text output in
 
 ## Features
 
-- FastAPI backend with MCP integration
-- React + TypeScript frontend with TailwindCSS
+- FastAPI backend with direct MCP integration via SSE
+- React + TypeScript frontend with Material UI
 - Real-time text-to-speech conversion
 - Voice selection and preview
 - Cursor MCP integration
@@ -81,12 +81,27 @@ cd ../..
 poetry run uvicorn src.backend.app:app
 ```
 
-### MCP Binary
+### MCP Integration
 
-```bash
-# Run MCP binary
-poetry run elevenlabs-mcp
-```
+The backend server includes direct MCP integration via Server-Sent Events (SSE), allowing Cursor to communicate directly with the backend without requiring a separate binary.
+
+#### MCP Commands
+
+The MCP integration supports the following commands:
+
+- `speak_text`: Converts selected text to speech
+- `list_voices`: Lists all available voices
+- `get_models`: Gets available TTS models
+
+#### Usage in Cursor
+
+1. Start the backend server: `poetry run uvicorn src.backend.app:app`
+2. In Cursor, go to Settings > MCP Servers
+3. Add a new MCP server with the following configuration:
+   - Name: ElevenLabs TTS
+   - Command: `curl -N http://localhost:9020/mcp/sse`
+4. In Cursor, select text you want to convert to speech
+5. Use the MCP tool `speak_text` to convert the selected text to speech
 
 ## Configuration
 
@@ -108,9 +123,6 @@ WS_PORT=9021
 # Development Settings
 DEBUG=false
 RELOAD=true
-
-# MCP Configuration
-MCP_PORT=9022
 ```
 
 ## License

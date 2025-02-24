@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -7,6 +7,11 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 from .routes import router
+from .websocket import websocket_endpoint
+from mcp.server.fastmcp import FastMCP
+from starlette.responses import Response
+from starlette.routing import Mount
+from starlette.applications import Starlette
 
 # Load environment variables
 load_dotenv()
@@ -39,6 +44,9 @@ config = load_config()
 # Include our API routes
 app.include_router(router)
 
+# Add WebSocket endpoint
+app.add_websocket_route("/ws", websocket_endpoint)
+
 # Create static directory if it doesn't exist
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
@@ -49,6 +57,17 @@ assets_dir.mkdir(exist_ok=True)
 
 # Mount static files only if the directory exists
 app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+# Initialize MCP server
+mcp_server = FastMCP("ElevenLabs TTS")
+from .mcp_tools import register_mcp_tools
+register_mcp_tools(mcp_server)
+
+# Add MCP SSE endpoint
+@app.get("/mcp/sse")
+async def mcp_sse(request: Request):
+    """MCP SSE endpoint for Cursor integration."""
+    return await mcp_server.run_sse_async(request)
 
 @app.get("/")
 async def root():
@@ -63,7 +82,8 @@ async def health_check():
     return {
         "status": "healthy",
         "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
-        "config_loaded": bool(config)
+        "config_loaded": bool(config),
+        "mcp_enabled": True
     }
 
 # Catch-all route to serve the frontend for any non-API routes
