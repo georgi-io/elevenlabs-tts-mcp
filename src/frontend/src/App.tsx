@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Container,
   Paper,
@@ -22,7 +22,8 @@ import {
   Tab,
   Switch,
   FormControlLabel,
-  Snackbar
+  Snackbar,
+  LinearProgress
 } from '@mui/material'
 import {
   PlayArrow as PlayIcon,
@@ -30,9 +31,10 @@ import {
   RecordVoiceOver as MicIcon,
   VolumeUp as VolumeIcon,
   Settings as SettingsIcon,
-  Save as SaveIcon
+  Save as SaveIcon,
+  Speed as StreamingIcon
 } from '@mui/icons-material'
-import apiService, { Voice, Model, Config } from './services/api'
+import apiService, { Voice, Model, Config, connectWebSocket, sendTTSRequest } from './services/api'
 
 // Create a custom theme
 const theme = createTheme({
@@ -110,21 +112,28 @@ function TabPanel(props: TabPanelProps) {
 }
 
 function App() {
-  const [text, setText] = useState('')
+  const [text, setText] = useState<string>('')
   const [voices, setVoices] = useState<Voice[]>([])
   const [models, setModels] = useState<Model[]>([])
-  const [selectedVoice, setSelectedVoice] = useState('')
-  const [selectedModel, setSelectedModel] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [audioUrl, setAudioUrl] = useState('')
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [error, setError] = useState('')
-  const [tabValue, setTabValue] = useState(0)
+  const [selectedVoice, setSelectedVoice] = useState<string>('')
+  const [selectedModel, setSelectedModel] = useState<string>('')
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [audioUrl, setAudioUrl] = useState<string>('')
+  const [isPlaying, setIsPlaying] = useState<boolean>(false)
+  const [error, setError] = useState<string>('')
+  const [tabValue, setTabValue] = useState<number>(0)
   const [config, setConfig] = useState<Config | null>(null)
   const [autoPlay, setAutoPlay] = useState(true)
   const [saveAudio, setSaveAudio] = useState(true)
-  const [snackbarOpen, setSnackbarOpen] = useState(false)
-  const [snackbarMessage, setSnackbarMessage] = useState('')
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false)
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('')
+  
+  // New state for streaming
+  const [isStreaming, setIsStreaming] = useState<boolean>(false)
+  const [streamProgress, setStreamProgress] = useState<number>(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
 
   // Fetch available voices, models and config on component mount
   useEffect(() => {
@@ -229,6 +238,126 @@ function App() {
     setSnackbarOpen(false)
   }
 
+  // Handle text to speech with streaming
+  const handleStreamTextToSpeech = async () => {
+    if (!text) {
+      setError('Please enter some text');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setIsStreaming(true);
+      setError('');
+      setStreamProgress(0);
+      
+      // Create audio context if needed
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+      }
+      
+      // Connect to WebSocket
+      const ws = connectWebSocket(
+        // onMessage handler
+        (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            
+            switch (message.type) {
+              case 'audio_start':
+                console.log('Audio streaming started');
+                setStreamProgress(5);
+                break;
+                
+              case 'audio_chunk':
+                // Decode base64 audio chunk
+                const audioData = atob(message.data);
+                const arrayBuffer = new ArrayBuffer(audioData.length);
+                const view = new Uint8Array(arrayBuffer);
+                for (let i = 0; i < audioData.length; i++) {
+                  view[i] = audioData.charCodeAt(i);
+                }
+                
+                // Update progress
+                setStreamProgress((prev) => Math.min(prev + 5, 95));
+                
+                // Play the chunk
+                const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+                const url = URL.createObjectURL(blob);
+                
+                if (!isPlaying) {
+                  audioRef.current!.src = url;
+                  audioRef.current!.play();
+                  setIsPlaying(true);
+                } else {
+                  // Queue the next chunk
+                  const nextAudio = new Audio();
+                  nextAudio.src = url;
+                  nextAudio.onended = () => {
+                    URL.revokeObjectURL(url);
+                  };
+                  nextAudio.play();
+                }
+                break;
+                
+              case 'audio_complete':
+                console.log('Audio streaming completed');
+                setStreamProgress(100);
+                setIsStreaming(false);
+                setIsLoading(false);
+                break;
+                
+              case 'error':
+                console.error('Streaming error:', message.message);
+                setError(`Streaming error: ${message.message}`);
+                setIsStreaming(false);
+                setIsLoading(false);
+                break;
+            }
+          } catch (err) {
+            console.error('Error processing WebSocket message:', err);
+            setError('Error processing audio stream');
+            setIsStreaming(false);
+            setIsLoading(false);
+          }
+        },
+        // onOpen handler
+        () => {
+          // Send TTS request once connected
+          sendTTSRequest(
+            ws,
+            text,
+            selectedVoice || (config?.default_voice_id || ''),
+            selectedModel || (config?.default_model_id || '')
+          );
+        },
+        // onClose handler
+        () => {
+          if (isStreaming) {
+            setIsStreaming(false);
+            setIsLoading(false);
+          }
+        },
+        // onError handler
+        () => {
+          setError('WebSocket connection error');
+          setIsStreaming(false);
+          setIsLoading(false);
+        }
+      );
+      
+    } catch (err) {
+      console.error('Error streaming text to speech:', err);
+      setError('Failed to stream text to speech');
+      setIsStreaming(false);
+      setIsLoading(false);
+    }
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -316,37 +445,37 @@ function App() {
                 {isLoading ? 'Converting...' : 'Convert to Speech'}
               </Button>
               
-              {audioUrl && (
-                <Box>
-                  <IconButton
-                    color="primary"
-                    size="large"
-                    onClick={() => playAudio(audioUrl)}
-                    disabled={isPlaying}
-                    sx={{ mr: 1 }}
-                  >
-                    <PlayIcon />
-                  </IconButton>
-                  
-                  {isPlaying && (
-                    <IconButton
-                      color="secondary"
-                      size="large"
-                      onClick={stopAudio}
-                    >
-                      <StopIcon />
-                    </IconButton>
-                  )}
-                </Box>
-              )}
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<StreamingIcon />}
+                onClick={handleStreamTextToSpeech}
+                disabled={isLoading}
+              >
+                {isStreaming ? <CircularProgress size={20} color="inherit" /> : 'Stream Speech'}
+              </Button>
             </Box>
             
-            {audioUrl && (
-              <Box mt={3} p={2} bgcolor="background.default" borderRadius={1}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Audio Preview
+            {isStreaming && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Streaming progress: {streamProgress}%
                 </Typography>
-                <audio controls src={audioUrl} style={{ width: '100%' }} />
+                <LinearProgress variant="determinate" value={streamProgress} sx={{ mt: 1 }} />
+              </Box>
+            )}
+            
+            {audioUrl && !isStreaming && (
+              <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <IconButton
+                  color="primary"
+                  onClick={isPlaying ? stopAudio : () => playAudio(audioUrl)}
+                >
+                  {isPlaying ? <StopIcon /> : <PlayIcon />}
+                </IconButton>
+                <Typography>
+                  {isPlaying ? 'Playing audio...' : 'Audio ready to play'}
+                </Typography>
               </Box>
             )}
           </TabPanel>

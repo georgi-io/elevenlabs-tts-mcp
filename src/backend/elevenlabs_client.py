@@ -1,9 +1,12 @@
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, AsyncGenerator
 import httpx
 import os
 from fastapi import HTTPException
 import logging
 from dotenv import load_dotenv
+import elevenlabs
+from elevenlabs import generate, stream, Voice, VoiceSettings
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -129,4 +132,41 @@ class ElevenLabsClient:
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to connect to ElevenLabs API: {str(e)}"
-                ) 
+                )
+
+    async def text_to_speech_stream(
+        self,
+        text: str,
+        voice_id: str,
+        model_id: Optional[str] = "eleven_monolingual_v1"
+    ) -> AsyncGenerator[bytes, None]:
+        """Convert text to speech using ElevenLabs API with streaming support."""
+        logger.info(f"Converting text to speech with streaming: voice_id={voice_id}, model_id={model_id}")
+        
+        # Setze den API-Key
+        elevenlabs.set_api_key(self.api_key)
+        
+        try:
+            # Verwende die stream-Funktion für Streaming
+            audio_stream = stream(
+                text=text,
+                voice=voice_id,
+                model=model_id,
+                stream=True,
+                latency=3  # Optimiere für niedrige Latenz
+            )
+            
+            # Stream audio chunks zurück
+            for chunk in audio_stream:
+                if isinstance(chunk, bytes):
+                    yield chunk
+                    # Small delay to avoid overwhelming the client
+                    await asyncio.sleep(0.01)
+                    
+            logger.info("Successfully streamed text to speech")
+        except Exception as e:
+            logger.error(f"Error during text-to-speech streaming: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to stream text to speech: {str(e)}"
+            ) 

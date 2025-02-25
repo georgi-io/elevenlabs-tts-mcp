@@ -1,7 +1,8 @@
 import asyncio
 import json
 import logging
-from typing import Dict, List, Optional, Set
+import base64
+from typing import Dict, List, Optional, Set, AsyncGenerator
 import os
 from fastapi import WebSocket, WebSocketDisconnect
 from dotenv import load_dotenv
@@ -64,11 +65,58 @@ class WebSocketManager:
         elif message_type == "voice_list":
             # Forward voice list to all clients
             await self.broadcast_to_clients(message)
+        elif message_type == "audio_chunk":
+            # Forward audio chunk to all clients
+            await self.broadcast_to_clients(message)
+        elif message_type == "audio_complete":
+            # Forward audio complete message to all clients
+            await self.broadcast_to_clients(message)
         elif message_type == "error":
             # Forward error to all clients
             await self.broadcast_to_clients(message)
         else:
             logger.warning(f"Unknown message type from MCP: {message_type}")
+
+    async def stream_audio_to_clients(self, audio_stream: AsyncGenerator[bytes, None], text: str, voice_id: str):
+        """Stream audio chunks to all connected clients."""
+        try:
+            # Send start message
+            await self.broadcast_to_clients({
+                "type": "audio_start",
+                "text": text,
+                "voice_id": voice_id
+            })
+            
+            # Stream audio chunks
+            chunk_count = 0
+            async for chunk in audio_stream:
+                chunk_count += 1
+                # Encode chunk as base64 for JSON transmission
+                encoded_chunk = base64.b64encode(chunk).decode('utf-8')
+                
+                # Send chunk to all clients
+                await self.broadcast_to_clients({
+                    "type": "audio_chunk",
+                    "chunk_index": chunk_count,
+                    "data": encoded_chunk
+                })
+                
+                # Small delay to avoid overwhelming clients
+                await asyncio.sleep(0.01)
+            
+            # Send completion message
+            await self.broadcast_to_clients({
+                "type": "audio_complete",
+                "total_chunks": chunk_count
+            })
+            
+            logger.info(f"Successfully streamed {chunk_count} audio chunks to clients")
+        except Exception as e:
+            logger.error(f"Error streaming audio to clients: {str(e)}")
+            await self.broadcast_to_clients({
+                "type": "error",
+                "message": f"Audio streaming error: {str(e)}"
+            })
 
 # Create a singleton instance
 manager = WebSocketManager()

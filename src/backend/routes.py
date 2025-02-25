@@ -114,6 +114,36 @@ async def text_to_speech(request: TTSRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to convert text to speech: {str(e)}")
 
+@router.post("/tts/stream")
+async def text_to_speech_stream(request: TTSRequest):
+    """Stream text to speech conversion."""
+    try:
+        # Load configuration
+        config = load_config()
+        
+        # Use provided voice_id/model_id or default from config
+        voice_id = request.voice_id or config["default_voice_id"]
+        model_id = request.model_id or config["default_model_id"]
+        
+        # Generate audio stream using our client
+        audio_stream = client.text_to_speech_stream(
+            text=request.text,
+            voice_id=voice_id,
+            model_id=model_id
+        )
+        
+        # Return audio as streaming response
+        return StreamingResponse(
+            audio_stream,
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "attachment; filename=speech.mp3",
+                "Cache-Control": "no-cache"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stream text to speech: {str(e)}")
+
 @router.post("/mcp")
 async def handle_mcp_request(request: MCPRequest) -> Dict:
     """Handle MCP requests from the frontend."""

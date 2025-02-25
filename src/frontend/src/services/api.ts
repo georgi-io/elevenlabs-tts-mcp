@@ -26,6 +26,7 @@ export interface Config {
     auto_play: boolean;
     save_audio: boolean;
   };
+  use_streaming?: boolean;
 }
 
 export const apiService = {
@@ -41,6 +42,16 @@ export const apiService = {
       '/tts',
       { text, voice_id: voiceId, model_id: modelId },
       { responseType: 'blob' }
+    );
+    return response.data;
+  },
+
+  // Stream text to speech
+  streamTextToSpeech: async (text: string, voiceId: string, modelId?: string): Promise<ReadableStream<Uint8Array> | null> => {
+    const response = await api.post(
+      '/tts/stream',
+      { text, voice_id: voiceId, model_id: modelId },
+      { responseType: 'stream' }
     );
     return response.data;
   },
@@ -72,6 +83,59 @@ export const apiService = {
     const response = await api.post<Config>('/config', config);
     return response.data;
   },
+};
+
+/**
+ * Connect to the WebSocket server for streaming audio
+ */
+export const connectWebSocket = (
+  onMessage: (event: MessageEvent) => void,
+  onOpen?: () => void,
+  onClose?: () => void,
+  onError?: (event: Event) => void
+): WebSocket => {
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${wsProtocol}//${window.location.hostname}:9020/ws`;
+  
+  const ws = new WebSocket(wsUrl);
+  
+  ws.onopen = () => {
+    console.log('WebSocket connection established');
+    if (onOpen) onOpen();
+  };
+  
+  ws.onmessage = onMessage;
+  
+  ws.onclose = () => {
+    console.log('WebSocket connection closed');
+    if (onClose) onClose();
+  };
+  
+  ws.onerror = (event) => {
+    console.error('WebSocket error:', event);
+    if (onError) onError(event);
+  };
+  
+  return ws;
+};
+
+/**
+ * Send a text-to-speech request via WebSocket
+ */
+export const sendTTSRequest = (
+  ws: WebSocket,
+  text: string,
+  voice_id?: string,
+  model_id?: string
+): void => {
+  const message = {
+    type: 'tts_request',
+    text,
+    voice_id,
+    model_id
+  };
+  
+  ws.send(JSON.stringify(message));
 };
 
 export default apiService; 

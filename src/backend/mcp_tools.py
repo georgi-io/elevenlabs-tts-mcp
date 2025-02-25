@@ -8,11 +8,14 @@ import logging
 import os
 import json
 import subprocess
+import asyncio
+import base64
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from .elevenlabs_client import ElevenLabsClient
 from mcp.server.fastmcp import FastMCP
-from elevenlabs import generate, voices, Models, set_api_key
+from elevenlabs import generate, voices, Models, set_api_key, stream
+from .websocket import manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +41,8 @@ DEFAULT_CONFIG = {
     "default_model_id": "eleven_monolingual_v1",
     "settings": {
         "auto_play": True,
-        "save_audio": True
+        "save_audio": True,
+        "use_streaming": True
     }
 }
 
@@ -107,23 +111,92 @@ def register_mcp_tools(mcp_server: FastMCP) -> None:
             
             logger.info(f"Converting text to speech with voice ID: {selected_voice_id} and model ID: {selected_model_id}")
             
-            # Generate audio
-            audio = generate(
-                text=text,
-                voice=selected_voice_id,
-                model=selected_model_id
-            )
+            # Check if streaming is enabled in config
+            use_streaming = config.get("settings", {}).get("use_streaming", True)
             
+            if use_streaming:
+                # Use streaming approach
+                # Create a task to handle streaming in the background
+                asyncio.create_task(stream_text_to_speech(
+                    text=text,
+                    voice_id=selected_voice_id,
+                    model_id=selected_model_id,
+                    config=config
+                ))
+                
+                return {
+                    "success": True, 
+                    "message": "Text is being converted to speech and streamed",
+                    "streaming": True
+                }
+            else:
+                # Use non-streaming approach (original implementation)
+                # Generate audio
+                audio = generate(
+                    text=text,
+                    voice=selected_voice_id,
+                    model=selected_model_id
+                )
+                
+                # Create output directory if it doesn't exist
+                output_dir = CONFIG_DIR / "audio"
+                output_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Save audio file
+                if config["settings"]["save_audio"]:
+                    # Use a truncated version of the text for the filename (first 10 chars)
+                    text_preview = text[:10] if len(text) > 10 else text
+                    voice_id_short = selected_voice_id[-6:] if len(selected_voice_id) > 6 else selected_voice_id
+                    output_file = output_dir / f"speech_{text_preview}_{voice_id_short}.mp3"
+                    
+                    with open(output_file, "wb") as f:
+                        f.write(audio)
+                    
+                    logger.info(f"Audio saved to {output_file}")
+                    
+                    # Auto-play on macOS if enabled
+                    if config["settings"]["auto_play"] and os.name == "posix":
+                        try:
+                            subprocess.Popen(["afplay", str(output_file)])
+                            logger.info("Playing audio...")
+                        except Exception as e:
+                            logger.error(f"Error playing audio: {e}")
+                
+                return {"success": True, "message": "Text converted to speech successfully", "streaming": False}
+        except Exception as e:
+            logger.error(f"Error in speak_text: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def stream_text_to_speech(text: str, voice_id: str, model_id: str, config: Dict):
+        """Stream text to speech using ElevenLabs API."""
+        try:
             # Create output directory if it doesn't exist
             output_dir = CONFIG_DIR / "audio"
             output_dir.mkdir(parents=True, exist_ok=True)
             
-            # Save audio file
+            # Generate a filename
+            text_preview = text[:10] if len(text) > 10 else text
+            voice_id_short = voice_id[-6:] if len(voice_id) > 6 else voice_id
+            output_file = output_dir / f"speech_{text_preview}_{voice_id_short}.mp3"
+            
+            # Set API key
+            set_api_key(ELEVEN_API_KEY)
+            
+            # Stream to clients via WebSocket
+            await manager.stream_audio_to_clients(
+                audio_stream=client.text_to_speech_stream(text, voice_id, model_id),
+                text=text,
+                voice_id=voice_id
+            )
+            
+            # If save_audio is enabled, also save the complete file
             if config["settings"]["save_audio"]:
-                # Use a truncated version of the text for the filename (first 10 chars)
-                text_preview = text[:10] if len(text) > 10 else text
-                voice_id_short = selected_voice_id[-6:] if len(selected_voice_id) > 6 else selected_voice_id
-                output_file = output_dir / f"speech_{text_preview}_{voice_id_short}.mp3"
+                # We need to get the audio again since the stream was consumed
+                audio = generate(
+                    text=text,
+                    voice=voice_id,
+                    model=model_id
+                )
                 
                 with open(output_file, "wb") as f:
                     f.write(audio)
@@ -138,10 +211,13 @@ def register_mcp_tools(mcp_server: FastMCP) -> None:
                     except Exception as e:
                         logger.error(f"Error playing audio: {e}")
             
-            return {"success": True, "message": "Text converted to speech successfully"}
+            logger.info("Successfully streamed text to speech")
         except Exception as e:
-            logger.error(f"Error in speak_text: {e}")
-            return {"success": False, "error": str(e)}
+            logger.error(f"Error streaming text to speech: {e}")
+            await manager.broadcast_to_clients({
+                "type": "error",
+                "message": f"Error streaming text to speech: {str(e)}"
+            })
 
     @mcp_server.tool("list_voices")
     def list_voices(random_string: str = "") -> Dict[str, Any]:
