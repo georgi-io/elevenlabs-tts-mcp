@@ -1,17 +1,15 @@
-from fastapi import FastAPI, HTTPException, WebSocket, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import yaml
 import os
 import threading
-import asyncio
 from dotenv import load_dotenv
 from pathlib import Path
 from .routes import router
 from .websocket import websocket_endpoint
 from mcp.server.fastmcp import FastMCP
-from starlette.responses import Response
 import logging
 from .mcp_tools import register_mcp_tools
 
@@ -30,7 +28,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="ElevenLabs TTS MCP",
     description="Text-to-Speech service using ElevenLabs API",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 # CORS middleware configuration
@@ -42,6 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Load configuration
 def load_config():
     config_path = Path("config.yaml")
@@ -49,6 +48,7 @@ def load_config():
         with open(config_path, "r") as f:
             return yaml.safe_load(f)
     return {"voices": {}, "settings": {}}
+
 
 config = load_config()
 
@@ -86,9 +86,11 @@ mcp_server = FastMCP("ElevenLabs TTS")
 mcp_server.settings.port = MCP_PORT
 register_mcp_tools(mcp_server)
 
+
 # Start MCP server in a separate thread
 def start_mcp_server():
-    mcp_server.run(transport='sse')
+    mcp_server.run(transport="sse")
+
 
 # Start the MCP server in a background thread when the app starts
 @app.on_event("startup")
@@ -99,6 +101,7 @@ async def startup_event():
     logger.info(f"Backend server running at http://localhost:{PORT}")
     logger.info(f"WebSocket server running at ws://localhost:{WS_PORT}")
     logger.info(f"MCP server running at http://localhost:{MCP_PORT}/sse")
+
 
 @app.get("/")
 async def root():
@@ -111,14 +114,16 @@ async def root():
     logger.warning("index.html not found in static directory")
     return {"status": "ok", "service": "elevenlabs-tts-mcp"}
 
+
 @app.get("/health")
 async def health_check():
     return {
         "status": "healthy",
         "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
         "config_loaded": bool(config),
-        "mcp_enabled": True
+        "mcp_enabled": True,
     }
+
 
 # Catch-all route to serve the frontend for any non-API routes
 @app.get("/{full_path:path}")
@@ -126,13 +131,13 @@ async def serve_frontend(full_path: str):
     # Skip API routes
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404, detail="Not found")
-    
+
     # Serve index.html for all other routes (SPA support)
     index_path = static_dir / "index.html"
     if index_path.exists():
         logger.info(f"Serving index.html for path: {full_path}")
         return FileResponse(str(index_path))
-    
+
     # If frontend is not built yet
     logger.warning(f"Frontend not built yet, requested path: {full_path}")
-    return {"status": "frontend_not_built", "message": "Frontend has not been built yet"} 
+    return {"status": "frontend_not_built", "message": "Frontend has not been built yet"}

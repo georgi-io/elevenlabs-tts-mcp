@@ -10,11 +10,6 @@ if __name__ == "__main__":
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "9020"))
     reload = os.getenv("RELOAD", "true").lower() == "true"
-    
+
     # Run the FastAPI application
-    uvicorn.run(
-        "src.backend.app:app",
-        host=host,
-        port=port,
-        reload=reload
-    ) 
+    uvicorn.run("src.backend.app:app", host=host, port=port, reload=reload)
