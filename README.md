@@ -205,3 +205,56 @@ For additional help, please open an issue on the GitHub repository.
 ## License
 
 MIT 
+
+## Development Setup
+
+### Pre-commit Hooks
+
+This project uses pre-commit hooks to ensure code quality and consistency. The hooks will:
+1. Run code linting (ruff check)
+2. Format code (ruff format)
+3. Run unit tests (pytest)
+
+To set up the pre-commit hooks:
+
+```bash
+# Install dependencies including dev dependencies
+poetry install
+
+# Install pre-commit hooks
+poetry run pre-commit install
+```
+
+#### How the hooks work:
+
+- **Ruff Check (with --fix)**: 
+  - Runs before commit
+  - Automatically fixes simple issues
+  - If fixes are made, the files need to be staged again
+  - You'll see "Files were modified by this hook" message
+
+- **Ruff Format**:
+  - Runs after ruff check
+  - Formats your code according to the project's style
+  - If files are reformatted, they need to be staged again
+
+- **Pytest**:
+  - Runs all unit tests
+  - Commit will be blocked if tests fail
+
+If any hook modifies files or fails:
+1. The commit will be aborted
+2. Review the changes made by the hooks
+3. Stage the modified files (`git add .`)
+4. Try committing again
+
+You can also run the hooks manually:
+```bash
+# Run all hooks on all files
+poetry run pre-commit run --all-files
+
+# Run specific hook
+poetry run pre-commit run ruff --all-files
+poetry run pre-commit run ruff-format --all-files
+poetry run pre-commit run pytest --all-files
+``` 

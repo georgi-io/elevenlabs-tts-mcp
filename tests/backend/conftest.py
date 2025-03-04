@@ -13,9 +13,11 @@ import json
 @pytest.fixture
 def mock_elevenlabs():
     """Mock ElevenLabs API responses."""
-    with patch("elevenlabs.generate") as mock_generate, patch(
-        "elevenlabs.voices"
-    ) as mock_voices, patch("elevenlabs.Models") as mock_models:
+    with (
+        patch("elevenlabs.generate") as mock_generate,
+        patch("elevenlabs.voices") as mock_voices,
+        patch("elevenlabs.Models") as mock_models,
+    ):
         # Mock generate function
         mock_generate.return_value = b"fake_audio_data"
 
