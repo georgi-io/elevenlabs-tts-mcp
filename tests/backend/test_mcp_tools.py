@@ -15,7 +15,7 @@ class TestMCPTools:
         monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
 
         mcp_server = FastMCP()
-        register_mcp_tools(mcp_server)
+        register_mcp_tools(mcp_server, test_mode=True)
 
         # Execute
         @mcp_server.tool("speak_text")
@@ -48,7 +48,7 @@ class TestMCPTools:
         monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
 
         mcp_server = FastMCP()
-        register_mcp_tools(mcp_server)
+        register_mcp_tools(mcp_server, test_mode=True)
 
         # Execute with custom voice
         @mcp_server.tool("speak_text")
@@ -85,7 +85,7 @@ class TestMCPTools:
         test_audio_file.touch()
 
         mcp_server = FastMCP()
-        register_mcp_tools(mcp_server)
+        register_mcp_tools(mcp_server, test_mode=True)
 
         # Execute
         @mcp_server.tool("speak_text")
@@ -113,7 +113,7 @@ class TestMCPTools:
         mock_elevenlabs["voices"].return_value = mock_voices
 
         mcp_server = FastMCP()
-        register_mcp_tools(mcp_server)
+        register_mcp_tools(mcp_server, test_mode=True)
 
         # Execute
         @mcp_server.tool("list_voices")
@@ -137,7 +137,7 @@ class TestMCPTools:
         mock_elevenlabs["models"].return_value = mock_models
 
         mcp_server = FastMCP()
-        register_mcp_tools(mcp_server)
+        register_mcp_tools(mcp_server, test_mode=True)
 
         # Execute
         @mcp_server.tool("get_models")
@@ -163,7 +163,7 @@ class TestMCPTools:
         save_config(config)
 
         mcp_server = FastMCP()
-        register_mcp_tools(mcp_server)
+        register_mcp_tools(mcp_server, test_mode=True)
 
         # Test get config
         @mcp_server.tool("get_config")
@@ -199,7 +199,7 @@ class TestMCPTools:
         monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
 
         mcp_server = FastMCP()
-        register_mcp_tools(mcp_server)
+        register_mcp_tools(mcp_server, test_mode=True)
 
         # Test API error
         mock_elevenlabs["generate"].side_effect = Exception("API Error")

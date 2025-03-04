@@ -22,7 +22,9 @@ CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_CONFIG = {
     "default_voice_id": "21m00Tcm4TlvDq8ikWAM",
     "default_model_id": "eleven_monolingual_v1",
-    "settings": {"auto_play": True, "save_audio": True},
+    "settings": {
+        "auto_play": True,
+    },
 }
 
 
@@ -212,9 +214,8 @@ async def update_config(request: ConfigRequest):
             current_config["default_model_id"] = request.default_model_id
 
         if request.settings is not None:
-            for key, value in request.settings.items():
-                if key in current_config["settings"]:
-                    current_config["settings"][key] = value
+            if "auto_play" in request.settings:
+                current_config["settings"]["auto_play"] = request.settings["auto_play"]
 
         # Save updated configuration
         save_config(current_config)

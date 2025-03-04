@@ -135,4 +135,8 @@ jobs:
 
     - name: Run tests
       run: |
-        poetry run pytest tests -v 
+        # Set dummy API key for testing
+        echo "ELEVENLABS_API_KEY=dummy_key_for_testing" >> $GITHUB_ENV
+        poetry run pytest tests/backend -v
+      env:
+        ELEVENLABS_API_KEY: dummy_key_for_testing 

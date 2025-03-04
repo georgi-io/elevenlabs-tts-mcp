@@ -24,9 +24,7 @@ export interface Config {
   default_model_id: string;
   settings: {
     auto_play: boolean;
-    save_audio: boolean;
   };
-  use_streaming?: boolean;
 }
 
 export const apiService = {

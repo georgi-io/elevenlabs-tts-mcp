@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Dict, Optional, Any
 from .elevenlabs_client import ElevenLabsClient
 from mcp.server.fastmcp import FastMCP
-from elevenlabs import generate, voices, Models, set_api_key
 from .websocket import manager
 import tempfile
 import threading
@@ -20,13 +19,6 @@ import threading
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Get API key from environment variable
-ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
-if ELEVEN_API_KEY:
-    set_api_key(ELEVEN_API_KEY)
-else:
-    logger.warning("ELEVENLABS_API_KEY not set. Text-to-speech functionality will be limited.")
 
 # Configuration paths
 CONFIG_DIR = Path.home() / ".config" / "elevenlabs-mcp"
@@ -41,13 +33,11 @@ DEFAULT_CONFIG = {
     "default_model_id": "eleven_monolingual_v1",
     "settings": {
         "auto_play": True,
-        "save_audio": False,  # Don't save audio files by default
-        "use_streaming": False,
     },
 }
 
 # Initialize ElevenLabs client
-client = ElevenLabsClient()
+client = None  # We'll initialize this when registering tools
 
 
 def load_config() -> Dict:
@@ -90,11 +80,13 @@ def save_config(config: Dict) -> Dict:
         return config
 
 
-def register_mcp_tools(mcp_server: FastMCP) -> None:
+def register_mcp_tools(mcp_server: FastMCP, test_mode: bool = False) -> None:
     """Register MCP tools with the server."""
+    global client
+    client = ElevenLabsClient(test_mode=test_mode)
 
     @mcp_server.tool("speak_text")
-    def speak_text(text: str, voice_id: Optional[str] = None) -> Dict[str, Any]:
+    async def speak_text(text: str, voice_id: Optional[str] = None) -> Dict[str, Any]:
         """Convert text to speech using ElevenLabs.
 
         Args:
@@ -116,8 +108,8 @@ def register_mcp_tools(mcp_server: FastMCP) -> None:
                 f"Converting text to speech with voice ID: {selected_voice_id} and model ID: {selected_model_id}"
             )
 
-            # Generate audio
-            audio = generate(text=text, voice=selected_voice_id, model=selected_model_id)
+            # Generate audio using our client instance
+            audio = await client.text_to_speech(text, selected_voice_id, selected_model_id)
 
             if config["settings"]["auto_play"] and os.name == "posix":
                 # Create temporary file for playback
@@ -149,20 +141,6 @@ def register_mcp_tools(mcp_server: FastMCP) -> None:
                     os.unlink(temp_path)
                     logger.error(f"Error playing audio: {e}")
 
-            # Only save if explicitly configured
-            if config["settings"]["save_audio"]:
-                output_dir = CONFIG_DIR / "audio"
-                output_dir.mkdir(parents=True, exist_ok=True)
-                text_preview = text[:10] if len(text) > 10 else text
-                voice_id_short = (
-                    selected_voice_id[-6:] if len(selected_voice_id) > 6 else selected_voice_id
-                )
-                output_file = output_dir / f"speech_{text_preview}_{voice_id_short}.mp3"
-
-                with open(output_file, "wb") as f:
-                    f.write(audio)
-                logger.info(f"Audio saved to {output_file}")
-
             return {
                 "success": True,
                 "message": "Text converted to speech successfully",
@@ -184,9 +162,6 @@ def register_mcp_tools(mcp_server: FastMCP) -> None:
             voice_id_short = voice_id[-6:] if len(voice_id) > 6 else voice_id
             output_file = output_dir / f"speech_{text_preview}_{voice_id_short}.mp3"
 
-            # Set API key
-            set_api_key(ELEVEN_API_KEY)
-
             # Stream to clients via WebSocket
             await manager.stream_audio_to_clients(
                 audio_stream=client.text_to_speech_stream(text, voice_id, model_id),
@@ -197,7 +172,7 @@ def register_mcp_tools(mcp_server: FastMCP) -> None:
             # If save_audio is enabled, also save the complete file
             if config["settings"]["save_audio"]:
                 # We need to get the audio again since the stream was consumed
-                audio = generate(text=text, voice=voice_id, model=model_id)
+                audio = await client.text_to_speech(text, voice_id, model_id)
 
                 with open(output_file, "wb") as f:
                     f.write(audio)
@@ -220,31 +195,29 @@ def register_mcp_tools(mcp_server: FastMCP) -> None:
             )
 
     @mcp_server.tool("list_voices")
-    def list_voices(random_string: str = "") -> Dict[str, Any]:
+    async def list_voices(random_string: str = "") -> Dict[str, Any]:
         """List available voices from ElevenLabs.
 
         Returns:
             A dictionary containing the list of available voices
         """
         try:
-            available_voices = voices()
-            voice_list = [{"voice_id": v.voice_id, "name": v.name} for v in available_voices]
-            return {"success": True, "voices": voice_list}
+            available_voices = await client.get_voices()
+            return {"success": True, "voices": available_voices}
         except Exception as e:
             logger.error(f"Error in list_voices: {e}")
             return {"success": False, "error": str(e)}
 
     @mcp_server.tool("get_models")
-    def get_models(random_string: str = "") -> Dict[str, Any]:
+    async def get_models(random_string: str = "") -> Dict[str, Any]:
         """Get available TTS models from ElevenLabs.
 
         Returns:
             A dictionary containing the list of available models
         """
         try:
-            available_models = Models()
-            model_list = [{"model_id": m.model_id, "name": m.name} for m in available_models]
-            return {"success": True, "models": model_list}
+            available_models = await client.get_models()
+            return {"success": True, "models": available_models}
         except Exception as e:
             logger.error(f"Error in get_models: {e}")
             return {"success": False, "error": str(e)}
@@ -284,9 +257,18 @@ def register_mcp_tools(mcp_server: FastMCP) -> None:
                 current_config["default_model_id"] = config_data["default_model_id"]
 
             if "settings" in config_data:
+                # Ensure all settings exist
+                if "settings" not in current_config:
+                    current_config["settings"] = {}
+
+                # Initialize missing settings with defaults
+                for key in DEFAULT_CONFIG["settings"]:
+                    if key not in current_config["settings"]:
+                        current_config["settings"][key] = DEFAULT_CONFIG["settings"][key]
+
+                # Update provided settings
                 for key, value in config_data["settings"].items():
-                    if key in current_config["settings"]:
-                        current_config["settings"][key] = value
+                    current_config["settings"][key] = value
 
             # Save updated configuration
             updated_config = save_config(current_config)

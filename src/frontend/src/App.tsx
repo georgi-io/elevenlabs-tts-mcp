@@ -122,7 +122,6 @@ function App() {
   const [tabValue, setTabValue] = useState<number>(0)
   const [config, setConfig] = useState<Config | null>(null)
   const [autoPlay, setAutoPlay] = useState(true)
-  const [saveAudio, setSaveAudio] = useState(true)
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false)
   const [snackbarMessage, setSnackbarMessage] = useState<string>('')
   
@@ -154,7 +153,6 @@ function App() {
           setSelectedVoice(configData.default_voice_id)
           setSelectedModel(configData.default_model_id)
           setAutoPlay(configData.settings.auto_play)
-          setSaveAudio(configData.settings.save_audio)
         } else if (voicesData.length > 0) {
           setSelectedVoice(voicesData[0].voice_id)
         }
@@ -218,8 +216,7 @@ function App() {
         default_voice_id: selectedVoice,
         default_model_id: selectedModel,
         settings: {
-          auto_play: autoPlay,
-          save_audio: saveAudio
+          auto_play: autoPlay
         }
       })
       
@@ -530,17 +527,6 @@ function App() {
                 />
               }
               label="Auto-play audio after conversion"
-            />
-            
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={saveAudio}
-                  onChange={(e) => setSaveAudio(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label="Save audio files locally"
             />
             
             <Box display="flex" justifyContent="flex-end" mt={4}>
