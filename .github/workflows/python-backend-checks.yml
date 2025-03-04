@@ -1,0 +1,138 @@
+name: Python Backend Checks
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+
+# Cancel in-progress runs on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare-environment:
+    name: 🔧 Prepare Environment
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          echo "key=python-deps-${{ hashFiles('pyproject.toml', 'poetry.lock') }}" >> $GITHUB_OUTPUT
+
+  code-quality:
+    name: 🔍 Code Quality (Linting)
+    needs: prepare-environment
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.cache/poetry
+          .venv
+        key: ${{ needs.prepare-environment.outputs.cache-key }}
+        restore-keys: |
+          python-deps-
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    - name: Run linting
+      run: |
+        poetry run ruff check .
+
+  code-style:
+    name: 💅 Code Style (Formatting)
+    needs: prepare-environment
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.cache/poetry
+          .venv
+        key: ${{ needs.prepare-environment.outputs.cache-key }}
+        restore-keys: |
+          python-deps-
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    - name: Check formatting
+      run: |
+        poetry run ruff format . --check
+
+  unit-tests:
+    name: 🧪 Unit Tests
+    needs: prepare-environment
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.cache/poetry
+          .venv
+        key: ${{ needs.prepare-environment.outputs.cache-key }}
+        restore-keys: |
+          python-deps-
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    - name: Run tests
+      run: |
+        poetry run pytest tests -v 
