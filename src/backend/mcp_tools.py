@@ -16,6 +16,8 @@ from .elevenlabs_client import ElevenLabsClient
 from mcp.server.fastmcp import FastMCP
 from elevenlabs import generate, voices, Models, set_api_key, stream
 from .websocket import manager
+import tempfile
+import threading
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -41,8 +43,8 @@ DEFAULT_CONFIG = {
     "default_model_id": "eleven_monolingual_v1",
     "settings": {
         "auto_play": True,
-        "save_audio": True,
-        "use_streaming": True
+        "save_audio": False,  # Don't save audio files by default
+        "use_streaming": False
     }
 }
 
@@ -111,58 +113,56 @@ def register_mcp_tools(mcp_server: FastMCP) -> None:
             
             logger.info(f"Converting text to speech with voice ID: {selected_voice_id} and model ID: {selected_model_id}")
             
-            # Check if streaming is enabled in config
-            use_streaming = config.get("settings", {}).get("use_streaming", True)
+            # Generate audio
+            audio = generate(
+                text=text,
+                voice=selected_voice_id,
+                model=selected_model_id
+            )
             
-            if use_streaming:
-                # Use streaming approach
-                # Create a task to handle streaming in the background
-                asyncio.create_task(stream_text_to_speech(
-                    text=text,
-                    voice_id=selected_voice_id,
-                    model_id=selected_model_id,
-                    config=config
-                ))
+            if config["settings"]["auto_play"] and os.name == "posix":
+                # Create temporary file for playback
+                with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+                    temp_file.write(audio)
+                    temp_path = temp_file.name
                 
-                return {
-                    "success": True, 
-                    "message": "Text is being converted to speech and streamed",
-                    "streaming": True
-                }
-            else:
-                # Use non-streaming approach (original implementation)
-                # Generate audio
-                audio = generate(
-                    text=text,
-                    voice=selected_voice_id,
-                    model=selected_model_id
-                )
-                
-                # Create output directory if it doesn't exist
+                try:
+                    # Play the audio
+                    subprocess.Popen(["afplay", temp_path])
+                    logger.info("Playing audio...")
+                    
+                    # Schedule file deletion after estimated playback time
+                    # Assuming ~1 second per 20 characters of text
+                    playback_time = len(text) / 20 + 1  # +1 second buffer
+                    
+                    def cleanup_temp_file():
+                        try:
+                            os.unlink(temp_path)
+                            logger.info("Temporary audio file cleaned up")
+                        except Exception as e:
+                            logger.error(f"Error cleaning up temporary file: {e}")
+                    
+                    # Schedule cleanup
+                    timer = threading.Timer(playback_time, cleanup_temp_file)
+                    timer.start()
+                except Exception as e:
+                    # Clean up if playback fails
+                    os.unlink(temp_path)
+                    logger.error(f"Error playing audio: {e}")
+            
+            # Only save if explicitly configured
+            if config["settings"]["save_audio"]:
                 output_dir = CONFIG_DIR / "audio"
                 output_dir.mkdir(parents=True, exist_ok=True)
+                text_preview = text[:10] if len(text) > 10 else text
+                voice_id_short = selected_voice_id[-6:] if len(selected_voice_id) > 6 else selected_voice_id
+                output_file = output_dir / f"speech_{text_preview}_{voice_id_short}.mp3"
                 
-                # Save audio file
-                if config["settings"]["save_audio"]:
-                    # Use a truncated version of the text for the filename (first 10 chars)
-                    text_preview = text[:10] if len(text) > 10 else text
-                    voice_id_short = selected_voice_id[-6:] if len(selected_voice_id) > 6 else selected_voice_id
-                    output_file = output_dir / f"speech_{text_preview}_{voice_id_short}.mp3"
-                    
-                    with open(output_file, "wb") as f:
-                        f.write(audio)
-                    
-                    logger.info(f"Audio saved to {output_file}")
-                    
-                    # Auto-play on macOS if enabled
-                    if config["settings"]["auto_play"] and os.name == "posix":
-                        try:
-                            subprocess.Popen(["afplay", str(output_file)])
-                            logger.info("Playing audio...")
-                        except Exception as e:
-                            logger.error(f"Error playing audio: {e}")
-                
-                return {"success": True, "message": "Text converted to speech successfully", "streaming": False}
+                with open(output_file, "wb") as f:
+                    f.write(audio)
+                logger.info(f"Audio saved to {output_file}")
+            
+            return {"success": True, "message": "Text converted to speech successfully", "streaming": False}
         except Exception as e:
             logger.error(f"Error in speak_text: {e}")
             return {"success": False, "error": str(e)}
