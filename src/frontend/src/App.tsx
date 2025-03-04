@@ -130,7 +130,6 @@ function App() {
   const [streamProgress, setStreamProgress] = useState<number>(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
-  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
 
   // Fetch available voices, models and config on component mount
   useEffect(() => {
@@ -165,7 +164,7 @@ function App() {
     fetchData()
   }, [])
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
   }
 
