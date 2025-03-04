@@ -97,4 +97,13 @@ cache/
 src/backend/static/
 
 # Frontend build
-src/frontend/dist/ 
+src/frontend/dist/
+
+# Local development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary docs
+docs/tmp/ 
