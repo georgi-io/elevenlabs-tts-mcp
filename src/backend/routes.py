@@ -20,8 +20,8 @@ CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Default configuration
 DEFAULT_CONFIG = {
-    "default_voice_id": "21m00Tcm4TlvDq8ikWAM",
-    "default_model_id": "eleven_monolingual_v1",
+    "default_voice_id": "cgSgspJ2msm6clMCkdW9",  # Jessica's voice ID
+    "default_model_id": "eleven_flash_v2_5",
     "settings": {
         "auto_play": True,
     },

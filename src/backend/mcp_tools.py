@@ -29,8 +29,8 @@ CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Default configuration
 DEFAULT_CONFIG = {
-    "default_voice_id": "21m00Tcm4TlvDq8ikWAM",
-    "default_model_id": "eleven_monolingual_v1",
+    "default_voice_id": "cgSgspJ2msm6clMCkdW9",  # Jessica's voice ID
+    "default_model_id": "eleven_flash_v2_5",
     "settings": {
         "auto_play": True,
     },
@@ -54,11 +54,18 @@ def load_config() -> Dict:
         with open(CONFIG_FILE, "r") as f:
             config = json.load(f)
 
-        # Ensure all default keys exist
-        for key, value in DEFAULT_CONFIG.items():
-            if key not in config:
-                config[key] = value
+        # Ensure all default keys exist with correct values
+        if "default_voice_id" not in config or not config["default_voice_id"]:
+            config["default_voice_id"] = DEFAULT_CONFIG["default_voice_id"]
+        if "default_model_id" not in config or not config["default_model_id"]:
+            config["default_model_id"] = DEFAULT_CONFIG["default_model_id"]
+        if "settings" not in config:
+            config["settings"] = DEFAULT_CONFIG["settings"]
+        elif "auto_play" not in config["settings"]:
+            config["settings"]["auto_play"] = DEFAULT_CONFIG["settings"]["auto_play"]
 
+        # Save any updates we made
+        save_config(config)
         return config
     except Exception as e:
         logger.error(f"Error loading configuration: {e}")
