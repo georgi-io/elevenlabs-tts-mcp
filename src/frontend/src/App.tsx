@@ -14,7 +14,6 @@ import {
   IconButton,
   CircularProgress,
   Divider,
-  useTheme,
   ThemeProvider,
   createTheme,
   CssBaseline,
@@ -30,7 +29,6 @@ import {
   Stop as StopIcon,
   RecordVoiceOver as MicIcon,
   VolumeUp as VolumeIcon,
-  Settings as SettingsIcon,
   Save as SaveIcon,
   Speed as StreamingIcon
 } from '@mui/icons-material'
