@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 WS_HOST = os.getenv("WS_HOST", "127.0.0.1")
-WS_PORT = int(os.getenv("WS_PORT", "9021"))
+PORT = int(os.getenv("PORT", "9020"))
 
 
 class WebSocketManager:
     def __init__(self):
         self.active_connections: Set[WebSocket] = set()
         self.mcp_connection: Optional[WebSocket] = None
-        logger.info(f"WebSocket manager initialized on {WS_HOST}:{WS_PORT}")
+        logger.info(f"WebSocket manager initialized on {WS_HOST}:{PORT}")
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()

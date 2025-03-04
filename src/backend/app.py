@@ -18,7 +18,6 @@ load_dotenv()
 
 # Get port configurations from environment variables
 PORT = int(os.getenv("PORT", 9020))
-WS_PORT = int(os.getenv("WS_PORT", 9021))
 MCP_PORT = int(os.getenv("MCP_PORT", 9022))
 
 # Configure logging
@@ -99,7 +98,6 @@ async def startup_event():
     threading.Thread(target=start_mcp_server, daemon=True).start()
     # Log the server URLs
     logger.info(f"Backend server running at http://localhost:{PORT}")
-    logger.info(f"WebSocket server running at ws://localhost:{WS_PORT}")
     logger.info(f"MCP server running at http://localhost:{MCP_PORT}/sse")
 
 

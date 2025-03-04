@@ -3,7 +3,8 @@ Unit tests for MCP tools.
 """
 
 from pathlib import Path
-from src.backend.mcp_tools import register_mcp_tools, load_config, save_config
+from src.backend.mcp_tools import register_mcp_tools
+from src.backend.routes import load_config, save_config
 from mcp.server.fastmcp import FastMCP
 
 
@@ -12,7 +13,7 @@ class TestMCPTools:
         """Test basic text-to-speech conversion."""
         # Setup
         monkeypatch.setenv("ELEVENLABS_API_KEY", "fake_key")
-        monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
+        monkeypatch.setattr("src.backend.routes.CONFIG_DIR", temp_config_dir)
 
         mcp_server = FastMCP()
         register_mcp_tools(mcp_server, test_mode=True)
@@ -45,7 +46,7 @@ class TestMCPTools:
     ):
         """Test TTS with custom voice ID."""
         monkeypatch.setenv("ELEVENLABS_API_KEY", "fake_key")
-        monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
+        monkeypatch.setattr("src.backend.routes.CONFIG_DIR", temp_config_dir)
 
         mcp_server = FastMCP()
         register_mcp_tools(mcp_server, test_mode=True)
@@ -71,7 +72,7 @@ class TestMCPTools:
     ):
         """Test TTS with audio saving enabled."""
         monkeypatch.setenv("ELEVENLABS_API_KEY", "fake_key")
-        monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
+        monkeypatch.setattr("src.backend.routes.CONFIG_DIR", temp_config_dir)
 
         # Enable audio saving
         config = load_config()
@@ -107,7 +108,7 @@ class TestMCPTools:
     def test_list_voices(self, mock_elevenlabs, temp_config_dir, monkeypatch):
         """Test voice listing."""
         monkeypatch.setenv("ELEVENLABS_API_KEY", "fake_key")
-        monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
+        monkeypatch.setattr("src.backend.routes.CONFIG_DIR", temp_config_dir)
 
         mock_voices = [{"id": "voice1", "name": "Voice 1"}, {"id": "voice2", "name": "Voice 2"}]
         mock_elevenlabs["voices"].return_value = mock_voices
@@ -131,7 +132,7 @@ class TestMCPTools:
     def test_get_models(self, mock_elevenlabs, temp_config_dir, monkeypatch):
         """Test model listing."""
         monkeypatch.setenv("ELEVENLABS_API_KEY", "fake_key")
-        monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
+        monkeypatch.setattr("src.backend.routes.CONFIG_DIR", temp_config_dir)
 
         mock_models = [{"id": "model1", "name": "Model 1"}, {"id": "model2", "name": "Model 2"}]
         mock_elevenlabs["models"].return_value = mock_models
@@ -155,7 +156,7 @@ class TestMCPTools:
     def test_config_management(self, mock_elevenlabs, temp_config_dir, monkeypatch):
         """Test configuration management."""
         monkeypatch.setenv("ELEVENLABS_API_KEY", "fake_key")
-        monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
+        monkeypatch.setattr("src.backend.routes.CONFIG_DIR", temp_config_dir)
 
         # Set up initial config
         config = load_config()
@@ -196,7 +197,7 @@ class TestMCPTools:
     def test_error_handling(self, mock_elevenlabs, temp_config_dir, monkeypatch):
         """Test error handling in various scenarios."""
         monkeypatch.setenv("ELEVENLABS_API_KEY", "fake_key")
-        monkeypatch.setattr("src.backend.mcp_tools.CONFIG_DIR", temp_config_dir)
+        monkeypatch.setattr("src.backend.routes.CONFIG_DIR", temp_config_dir)
 
         mcp_server = FastMCP()
         register_mcp_tools(mcp_server, test_mode=True)

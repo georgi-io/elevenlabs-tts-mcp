@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import json
+import base64
 from pathlib import Path
 from .elevenlabs_client import ElevenLabsClient
 from .websocket import manager
@@ -109,12 +110,18 @@ async def text_to_speech(request: TTSRequest):
         # Generate audio using our client
         audio = await client.text_to_speech(text=request.text, voice_id=voice_id, model_id=model_id)
 
-        # Return audio as streaming response
-        return StreamingResponse(
-            iter([audio]),
-            media_type="audio/mpeg",
-            headers={"Content-Disposition": "attachment; filename=speech.mp3"},
+        # Send audio via WebSocket to all connected clients
+        encoded_audio = base64.b64encode(audio).decode("utf-8")
+        await manager.broadcast_to_clients(
+            {
+                "type": "audio_data",
+                "text": request.text,
+                "voice_id": voice_id,
+                "data": encoded_audio,
+            }
         )
+
+        return {}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to convert text to speech: {str(e)}")
 

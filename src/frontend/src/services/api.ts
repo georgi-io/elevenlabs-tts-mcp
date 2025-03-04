@@ -35,23 +35,8 @@ export const apiService = {
   },
 
   // Convert text to speech
-  textToSpeech: async (text: string, voiceId: string, modelId?: string): Promise<Blob> => {
-    const response = await api.post(
-      '/tts',
-      { text, voice_id: voiceId, model_id: modelId },
-      { responseType: 'blob' }
-    );
-    return response.data;
-  },
-
-  // Stream text to speech
-  streamTextToSpeech: async (text: string, voiceId: string, modelId?: string): Promise<ReadableStream<Uint8Array> | null> => {
-    const response = await api.post(
-      '/tts/stream',
-      { text, voice_id: voiceId, model_id: modelId },
-      { responseType: 'stream' }
-    );
-    return response.data;
+  textToSpeech: async (text: string, voiceId?: string, modelId?: string): Promise<void> => {
+    await api.post('/tts', { text, voice_id: voiceId, model_id: modelId });
   },
 
   // Get audio stream URL
@@ -115,25 +100,6 @@ export const connectWebSocket = (
   };
   
   return ws;
-};
-
-/**
- * Send a text-to-speech request via WebSocket
- */
-export const sendTTSRequest = (
-  ws: WebSocket,
-  text: string,
-  voice_id?: string,
-  model_id?: string
-): void => {
-  const message = {
-    type: 'tts_request',
-    text,
-    voice_id,
-    model_id
-  };
-  
-  ws.send(JSON.stringify(message));
 };
 
 export default apiService; 
