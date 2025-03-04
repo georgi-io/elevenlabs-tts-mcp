@@ -2,10 +2,7 @@
 Unit tests for MCP tools.
 """
 
-import pytest
 from pathlib import Path
-import json
-import os
 from src.backend.mcp_tools import register_mcp_tools, load_config, save_config
 from mcp.server.fastmcp import FastMCP
 
