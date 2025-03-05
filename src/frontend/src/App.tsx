@@ -287,6 +287,10 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Container maxWidth="md" sx={{ mt: 4 }}>
+        <Typography variant="h4" align="center" sx={{ mb: 4, color: 'primary.main', fontWeight: 'bold' }}>
+          Elevenlabs TTS Streamer
+        </Typography>
+        
         {!isAudioInitialized ? (
           <Box 
             sx={{ 
@@ -345,7 +349,7 @@ function App() {
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <TabList onChange={(_event: React.SyntheticEvent, newValue: string) => setSelectedTab(newValue)} aria-label="lab API tabs example">
                 <Tab label="Text to Speech" value="0" />
-                <Tab label="Voice Training" value="1" />
+                <Tab label="Voice Configuration" value="1" />
               </TabList>
             </Box>
             
