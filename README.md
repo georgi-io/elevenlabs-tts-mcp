@@ -1,39 +1,53 @@
-# ElevenLabs Text-to-Speech MCP
+# Project Jessica (ElevenLabs TTS MCP)
 
-This project integrates ElevenLabs Text-to-Speech capabilities with Cursor through the Model Context Protocol (MCP).
+This project integrates ElevenLabs Text-to-Speech capabilities with Cursor through the Model Context Protocol (MCP). It consists of a FastAPI backend service and a React frontend application.
 
 ## Features
 
 - Text-to-Speech conversion using ElevenLabs API
 - Voice selection and management
 - MCP integration for Cursor
-- Web interface for testing and configuration
+- Modern React frontend interface
+- WebSocket real-time communication
 - Pre-commit hooks for code quality
 - Automatic code formatting and linting
+
+## Project Structure
+
+```
+jessica/
+├── src/
+│   ├── backend/          # FastAPI backend service
+│   └── frontend/         # React frontend application
+├── terraform/            # Infrastructure as Code
+├── tests/               # Test suites
+└── docs/                # Documentation
+```
 
 ## Requirements
 
 - Python 3.11+
-- Poetry (for dependency management)
-- Node.js 18+ (for frontend development)
+- Poetry (for backend dependency management)
+- Node.js 18+ (for frontend)
 - Cursor (for MCP integration)
 
-## Installation & Setup
+## Local Development Setup
+
+### Backend Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/elevenlabs-mcp.git
-cd elevenlabs-mcp
+git clone https://github.com/georgi-io/jessica.git
+cd jessica
+
+# Create Python virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install backend dependencies
 poetry install
 
-# Install frontend dependencies
-cd src/frontend
-npm install
-cd ../..
-
-# Create and configure your .env file
+# Configure environment
 cp .env.example .env
 # Edit .env with your ElevenLabs API key
 
@@ -41,88 +55,111 @@ cp .env.example .env
 poetry run pre-commit install
 ```
 
-## Development
-
-### Starting the Services
+### Frontend Setup
 
 ```bash
-# Start the backend (in one terminal)
-python -m src.backend
-
-# Start the frontend (in another terminal)
+# Navigate to frontend directory
 cd src/frontend
+
+# Install dependencies
+npm install
+```
+
+## Development Servers
+
+### Starting the Backend
+
+```bash
+# Activate virtual environment if not active
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Start the backend
+python -m src.backend
+```
+
+The backend provides:
+- REST API: http://localhost:9020
+- WebSocket: ws://localhost:9020/ws
+- MCP Server: http://localhost:9022
+
+### Starting the Frontend
+
+```bash
+# In src/frontend directory
 npm run dev
 ```
 
-- Backend: http://localhost:9020
-- Frontend: http://localhost:5173
-- MCP Server: http://localhost:9022
-- WebSocket: ws://localhost:9021
+Frontend development server:
+- http://localhost:5173
 
-### Code Quality Tools
+## Environment Configuration
 
-This project uses several tools to maintain code quality:
+### Backend (.env)
+```env
+# ElevenLabs API
+ELEVENLABS_API_KEY=your-api-key
 
-#### Pre-commit Hooks
+# Server Configuration
+HOST=127.0.0.1
+PORT=9020
+MCP_PORT=9022
 
-The following hooks run automatically before each commit:
+# Development Settings
+DEBUG=false
+RELOAD=true
+```
 
-1. **Ruff Check**: Lints and fixes Python code
-2. **Ruff Format**: Formats Python code
-3. **Pytest**: Runs unit tests
+### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:9020
+VITE_WS_URL=ws://localhost:9020/ws
+```
 
-You can run these manually:
+## Code Quality Tools
+
+### Backend
 
 ```bash
-# Run all hooks
+# Run all pre-commit hooks
 poetry run pre-commit run --all-files
 
-# Run specific hooks
-poetry run pre-commit run ruff --all-files
-poetry run pre-commit run ruff-format --all-files
-poetry run pre-commit run pytest --all-files
+# Run specific tools
+poetry run ruff check .
+poetry run ruff format .
+poetry run pytest
 ```
 
-#### Direct Tool Usage
-
-For more control, you can use the tools directly:
+### Frontend
 
 ```bash
-# Show linting errors
-poetry run ruff check .
+# Lint
+npm run lint
 
-# Fix linting errors automatically
-poetry run ruff check --fix .
+# Type check
+npm run type-check
 
-# Format code
-poetry run ruff format .
+# Test
+npm run test
 ```
 
-### Configuration
+## Production Deployment
 
-Environment variables (`.env`):
-- `ELEVENLABS_API_KEY`: Your ElevenLabs API key
-- `PORT`: Backend server port (default: 9020)
-- `WS_PORT`: WebSocket port (default: 9021)
-- `MCP_PORT`: MCP server port (default: 9022)
-- `DEFAULT_VOICE_ID`: Default voice ID
+See [deployment-architecture.md](docs/deployment-architecture.md) for detailed deployment information.
 
-## Usage
+### Quick Overview
 
-### MCP Integration with Cursor
+- Frontend: Served from S3 via CloudFront at jessica.georgi.io
+- Backend API: Available at api.georgi.io/jessica
+- WebSocket: Connects to api.georgi.io/jessica/ws
+- Infrastructure: Managed via Terraform in georgi-io-infrastructure repository
+
+## MCP Integration with Cursor
 
 1. Start the backend server
 2. In Cursor settings, add new MCP server:
-   - Name: ElevenLabs TTS
+   - Name: Jessica TTS
    - Type: SSE
    - URL: http://localhost:9022/sse
-
-### Web Interface
-
-Access http://localhost:5173 to:
-- Test text-to-speech conversion
-- Configure default voice and model
-- Adjust settings like auto-play
 
 ## Troubleshooting
 
@@ -134,15 +171,15 @@ Access http://localhost:5173 to:
 
 2. **Connection Problems**
    - Error: "Cannot connect to MCP server"
-   - Solution: Verify backend is running and MCP URL is correct
+   - Solution: Verify backend is running and ports are correct
 
 3. **Port Conflicts**
    - Error: "Address already in use"
    - Solution: Change ports in `.env`
 
-4. **No Audio Output**
-   - Issue: Text processed but no audio
-   - Solution: Check auto-play settings
+4. **WebSocket Connection Failed**
+   - Error: "WebSocket connection failed"
+   - Solution: Ensure backend is running and WebSocket URL is correct
 
 For additional help, please open an issue on GitHub.
 
