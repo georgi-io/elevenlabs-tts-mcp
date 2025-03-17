@@ -19,6 +19,8 @@ load_dotenv()
 # Get port configurations from environment variables
 PORT = int(os.getenv("PORT", 9020))
 MCP_PORT = int(os.getenv("MCP_PORT", 9022))
+HOST = os.getenv("HOST", "127.0.0.1")
+MCP_HOST = os.getenv("MCP_HOST", "127.0.0.1")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -79,10 +81,11 @@ app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 # Mount the entire static directory to serve all static files
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-# Initialize MCP server
+# Create MCP server instance
 mcp_server = FastMCP("ElevenLabs TTS")
-# Configure MCP server to use the port from environment variables
+# Configure MCP server
 mcp_server.settings.port = MCP_PORT
+mcp_server.settings.host = MCP_HOST
 register_mcp_tools(mcp_server)
 
 
@@ -97,8 +100,8 @@ async def startup_event():
     # Start MCP server in a separate thread
     threading.Thread(target=start_mcp_server, daemon=True).start()
     # Log the server URLs
-    logger.info(f"Backend server running at http://localhost:{PORT}")
-    logger.info(f"MCP server running at http://localhost:{MCP_PORT}/sse")
+    logger.info(f"Backend server running at http://{HOST}:{PORT}")
+    logger.info(f"MCP server running at http://{MCP_HOST}:{MCP_PORT}/sse")
 
 
 @app.get("/")
