@@ -144,14 +144,41 @@ npm run test
 
 ## Production Deployment
 
-See [deployment-architecture.md](docs/deployment-architecture.md) for detailed deployment information.
+### AWS ECR and GitHub Actions Setup
+
+To enable automatic building and pushing of Docker images to Amazon ECR:
+
+1. Apply the Terraform configuration to create the required AWS resources:
+   ```bash
+   cd terraform
+   terraform init
+   terraform apply
+   ```
+
+2. The GitHub Actions workflow will automatically:
+   - Read the necessary configuration from the Terraform state in S3
+   - Build the Docker image on pushes to `main` or `develop` branches
+   - Push the image to ECR with tags for `latest` and the specific commit SHA
+
+3. No additional repository variables needed! The workflow fetches all required configuration from the Terraform state.
+
+### How it Works
+
+The GitHub Actions workflow is configured to:
+1. Initially assume a predefined IAM role with S3 read permissions
+2. Fetch and extract configuration values from the Terraform state file in S3
+3. Re-authenticate using the actual deployment role from the state file
+4. Build and push the Docker image to the ECR repository defined in the state
+
+This approach eliminates the need to manually configure GitHub repository variables and ensures that the CI/CD process always uses the current infrastructure configuration.
 
 ### Quick Overview
 
 - Frontend: Served from S3 via CloudFront at jessica.georgi.io
 - Backend API: Available at api.georgi.io/jessica
 - WebSocket: Connects to api.georgi.io/jessica/ws
-- Infrastructure: Managed via Terraform in georgi-io-infrastructure repository
+- Docker Image: Stored in AWS ECR and can be deployed to ECS/EKS
+- Infrastructure: Managed via Terraform in this repository
 
 ## MCP Integration with Cursor
 

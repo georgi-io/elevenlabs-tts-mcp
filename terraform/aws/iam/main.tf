@@ -77,8 +77,35 @@ resource "aws_iam_policy" "ecr_deployment_policy" {
   })
 }
 
+# Policy to allow reading from S3 Terraform state
+resource "aws_iam_policy" "terraform_state_read_policy" {
+  name        = "${var.role_name}-terraform-state-policy"
+  description = "Policy allowing GitHub Actions to read Terraform state from S3"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::georgi-io-terraform-state/services/jessica/terraform.tfstate"
+        ]
+      }
+    ]
+  })
+}
+
 # Attach policy to role
 resource "aws_iam_role_policy_attachment" "github_actions_ecr_policy_attachment" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.ecr_deployment_policy.arn
+}
+
+# Attach S3 policy to role
+resource "aws_iam_role_policy_attachment" "github_actions_s3_policy_attachment" {
+  role       = aws_iam_role.github_actions_role.name
+  policy_arn = aws_iam_policy.terraform_state_read_policy.arn
 } 

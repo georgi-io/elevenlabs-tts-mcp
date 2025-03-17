@@ -29,10 +29,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Configure AWS credentials
+      # Use a default role ARN initially to access S3
+      - name: Configure AWS credentials for S3 access
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-to-assume: arn:aws:iam::927485958639:role/jessica-github-actions-deployment-role
+          aws-region: eu-central-1
+      
+      - name: Fetch Terraform State
+        id: terraform-state
+        run: |
+          # Install jq
+          sudo apt-get update && sudo apt-get install -y jq
+          
+          # Download the state file
+          aws s3 cp s3://georgi-io-terraform-state/services/jessica/terraform.tfstate ./terraform.tfstate
+          
+          # Extract values from state
+          ROLE_ARN=$(jq -r '.outputs.github_actions_deployment_role_arn.value' terraform.tfstate)
+          ECR_REPOSITORY=$(jq -r '.outputs.ecr_repository_name.value' terraform.tfstate)
+          
+          # Set outputs
+          echo "role_arn=${ROLE_ARN}" >> $GITHUB_OUTPUT
+          echo "ecr_repository=${ECR_REPOSITORY}" >> $GITHUB_OUTPUT
+          
+          # Clean up
+          rm terraform.tfstate
+      
+      # Re-configure AWS credentials with the proper role from Terraform state
+      - name: Configure AWS credentials for ECR
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ steps.terraform-state.outputs.role_arn }}
           aws-region: eu-central-1
       
       - name: Login to Amazon ECR
@@ -48,12 +76,12 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:latest
-            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.terraform-state.outputs.ecr_repository }}:latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.terraform-state.outputs.ecr_repository }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
       - name: Set outputs for potential downstream jobs
         id: vars
         run: |
-          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}" >> $GITHUB_OUTPUT 
+          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ steps.terraform-state.outputs.ecr_repository }}:${{ github.sha }}" >> $GITHUB_OUTPUT 
