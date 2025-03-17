@@ -108,4 +108,33 @@ resource "aws_iam_role_policy_attachment" "github_actions_ecr_policy_attachment"
 resource "aws_iam_role_policy_attachment" "github_actions_s3_policy_attachment" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.terraform_state_read_policy.arn
+}
+
+# Policy to allow updating ECS services
+resource "aws_iam_policy" "ecs_deployment_policy" {
+  name        = "${var.role_name}-ecs-policy"
+  description = "Policy allowing GitHub Actions to update ECS services"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecs:UpdateService",
+          "ecs:DescribeServices",
+          "ecs:DescribeTaskDefinition",
+          "ecs:RegisterTaskDefinition",
+          "ecs:ListTaskDefinitions"
+        ]
+        Resource = "*"  # Could be restricted to specific clusters/services as needed
+      }
+    ]
+  })
+}
+
+# Attach ECS policy to role
+resource "aws_iam_role_policy_attachment" "github_actions_ecs_policy_attachment" {
+  role       = aws_iam_role.github_actions_role.name
+  policy_arn = aws_iam_policy.ecs_deployment_policy.arn
 } 
