@@ -95,8 +95,8 @@ def start_mcp_server():
 @app.on_event("startup")
 async def startup_event():
     # Start MCP server in a separate thread
-    thread = threading.Thread(target=start_mcp_server, daemon=True)
-    thread.start()
+    threading.Thread(target=start_mcp_server, daemon=True).start()
+    # Log the server URLs
     logger.info(f"Backend server running at http://localhost:{PORT}")
     logger.info(f"MCP server running at http://localhost:{MCP_PORT}/sse")
 
@@ -113,24 +113,45 @@ async def root():
     return {"status": "ok", "service": "elevenlabs-tts-mcp"}
 
 
-# Keep the root health endpoint for internal ALB health checks
 @app.get("/health")
-async def health_check_root():
-    """Health check endpoint at root level for ALB health checks."""
-    # Simple health check that doesn't need config access
+async def health_check():
     return {
         "status": "healthy",
         "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
-        "config_loaded": True,
+        "config_loaded": bool(config),
         "mcp_enabled": True,
+    }
+
+
+# Explizite Route für /jessica/health für den ALB Health Check
+@app.get("/jessica/health")
+async def jessica_health_check():
+    return {
+        "status": "healthy",
+        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
+        "config_loaded": bool(config),
+        "mcp_enabled": True,
+        "path": "jessica/health",
+    }
+
+
+# Explizite Route für /jessica/api/health für externe API-Aufrufe
+@app.get("/jessica/api/health")
+async def jessica_api_health_check():
+    return {
+        "status": "healthy",
+        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
+        "config_loaded": bool(config),
+        "mcp_enabled": True,
+        "path": "jessica/api/health",
     }
 
 
 # Catch-all route to serve the frontend for any non-API routes
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
-    # Skip API routes
-    if full_path.startswith("api/"):
+    # Skip API routes und jessica/api routes
+    if full_path.startswith("api/") or full_path.startswith("jessica/api/"):
         raise HTTPException(status_code=404, detail="Not found")
 
     # Serve index.html for all other routes (SPA support)

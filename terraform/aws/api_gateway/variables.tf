@@ -38,4 +38,10 @@ variable "container_port" {
 variable "mcp_port" {
   description = "Port for the MCP server"
   type        = number
+}
+
+variable "tls_server_name" {
+  description = "Server name to verify in the TLS handshake"
+  type        = string
+  default     = "api.run.georgi.io"
 } 

@@ -10,6 +10,11 @@ resource "aws_apigatewayv2_integration" "api" {
   
   payload_format_version = "1.0"
   timeout_milliseconds   = 30000
+  
+  # TLS-Konfiguration für VPC-Link Integration zum ALB
+  tls_config {
+    server_name_to_verify = var.tls_server_name
+  }
 }
 
 # Create API Gateway route for the API endpoint

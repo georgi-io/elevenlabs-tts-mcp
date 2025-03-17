@@ -110,6 +110,9 @@ module "api_gateway" {
   container_port = 9020
   mcp_port = 9022
   
+  # TLS configuration
+  tls_server_name = "api.run.georgi.io"  # Kann später durch eine Variable ersetzt werden
+  
   # Pass infrastructure outputs
   api_gateway_id = data.terraform_remote_state.infrastructure.outputs.api_gateway_id
   vpc_link_id = data.terraform_remote_state.infrastructure.outputs.vpc_link_id
