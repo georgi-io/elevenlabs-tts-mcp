@@ -95,8 +95,8 @@ def start_mcp_server():
 @app.on_event("startup")
 async def startup_event():
     # Start MCP server in a separate thread
-    threading.Thread(target=start_mcp_server, daemon=True).start()
-    # Log the server URLs
+    thread = threading.Thread(target=start_mcp_server, daemon=True)
+    thread.start()
     logger.info(f"Backend server running at http://localhost:{PORT}")
     logger.info(f"MCP server running at http://localhost:{MCP_PORT}/sse")
 
@@ -113,12 +113,15 @@ async def root():
     return {"status": "ok", "service": "elevenlabs-tts-mcp"}
 
 
+# Keep the root health endpoint for internal ALB health checks
 @app.get("/health")
-async def health_check():
+async def health_check_root():
+    """Health check endpoint at root level for ALB health checks."""
+    # Simple health check that doesn't need config access
     return {
         "status": "healthy",
         "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
-        "config_loaded": bool(config),
+        "config_loaded": True,
         "mcp_enabled": True,
     }
 

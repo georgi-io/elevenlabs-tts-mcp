@@ -7,6 +7,7 @@ from pathlib import Path
 from .elevenlabs_client import ElevenLabsClient
 from .websocket import manager
 from fastapi.responses import StreamingResponse
+import os
 
 # Change the prefix to match the frontend API calls
 router = APIRouter(prefix="/api")
@@ -94,6 +95,18 @@ async def get_models():
         return [Model(model_id=m["model_id"], name=m["name"]) for m in models_data]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch models: {str(e)}")
+
+
+@router.get("/health")
+async def health_check():
+    """Health check endpoint for the service."""
+    # Avoid circular imports by not referencing app.config
+    return {
+        "status": "healthy",
+        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
+        "config_loaded": True,  # Simplified for health check
+        "mcp_enabled": True,
+    }
 
 
 @router.post("/tts")

@@ -2,6 +2,7 @@
 # Dependencies
 node_modules/
 
+README-INFRASTRUCTURE.md
 # Environment variables
 .env
 

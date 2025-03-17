@@ -48,10 +48,14 @@ jobs:
           # Extract values from state
           ROLE_ARN=$(jq -r '.outputs.github_actions_deployment_role_arn.value' terraform.tfstate)
           ECR_REPOSITORY=$(jq -r '.outputs.ecr_repository_name.value' terraform.tfstate)
+          ECS_CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value' terraform.tfstate)
+          ECS_SERVICE=$(jq -r '.outputs.ecs_service_name.value' terraform.tfstate)
           
           # Set outputs
           echo "role_arn=${ROLE_ARN}" >> $GITHUB_OUTPUT
           echo "ecr_repository=${ECR_REPOSITORY}" >> $GITHUB_OUTPUT
+          echo "ecs_cluster=${ECS_CLUSTER}" >> $GITHUB_OUTPUT
+          echo "ecs_service=${ECS_SERVICE}" >> $GITHUB_OUTPUT
           
           # Clean up
           rm terraform.tfstate
@@ -80,6 +84,11 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/${{ steps.terraform-state.outputs.ecr_repository }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      
+      - name: Force new deployment of ECS service
+        run: |
+          aws ecs update-service --cluster ${{ steps.terraform-state.outputs.ecs_cluster }} --service ${{ steps.terraform-state.outputs.ecs_service }} --force-new-deployment
+          echo "New deployment of ECS service initiated"
       
       - name: Set outputs for potential downstream jobs
         id: vars
