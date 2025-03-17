@@ -108,3 +108,13 @@ src/frontend/dist/
 
 # Temporary docs
 docs/tmp/ 
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+terraform.tfvars.json
+terraform.tfvars
+*.auto.tfvars
+*.auto.tfvars.json 
