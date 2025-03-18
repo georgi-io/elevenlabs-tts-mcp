@@ -97,3 +97,17 @@ async def jessica_service_health_check():
 async def direct_mcp_sse(request: Request):
     """MCP SSE endpoint für Cursor integration direkt auf der Hauptanwendung."""
     return await mcp_server.run_sse(request)
+
+
+# Health-Check Route direkt auf Root-Pfad für AWS Health-Checks
+@app.get("/health")
+async def root_health_check():
+    """Health check endpoint für AWS Health-Checks."""
+    return {
+        "status": "healthy",
+        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
+        "config_loaded": bool(config),
+        "mcp_enabled": True,
+        "path": "health",
+        "base_path": BASE_PATH,
+    }
