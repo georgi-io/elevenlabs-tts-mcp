@@ -59,6 +59,29 @@ module "iam" {
   allowed_branches = ["main", "develop"]
 }
 
+# Add IAM policy for API Gateway integration
+resource "aws_iam_role_policy" "api_gateway" {
+  name = "api-gateway-integration-policy"
+  role = module.iam.deployment_role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "apigateway:GET",
+          "apigateway:UPDATE",
+          "apigateway:PUT"
+        ]
+        Resource = [
+          "arn:aws:apigateway:${var.aws_region}::/apis/${data.terraform_remote_state.infrastructure.outputs.api_gateway_id}/*"
+        ]
+      }
+    ]
+  })
+}
+
 # Include ECS Fargate module
 module "ecs" {
   source = "./aws/ecs"
@@ -89,6 +112,7 @@ module "ecs" {
     PORT = "9020"
     MCP_PORT = "9022"
     DEBUG = "false"
+    BASE_PATH = "/jessica-service"
   }
   
   # Enable cost optimization through scheduled scaling
@@ -101,17 +125,13 @@ module "ecs" {
 module "api_gateway" {
   source = "./aws/api_gateway"
   
-  # API Gateway routes
-  api_gateway_route_key = "ANY /jessica/{proxy+}"
-  mcp_gateway_route_key = "ANY /jessica/sse/{proxy+}"
-  
   # Service information
   service_name = "jessica"
   container_port = 9020
   mcp_port = 9022
   
   # TLS configuration
-  tls_server_name = "api.run.georgi.io"  # Kann später durch eine Variable ersetzt werden
+  tls_server_name = "api.run.georgi.io"
   
   # Pass infrastructure outputs
   api_gateway_id = data.terraform_remote_state.infrastructure.outputs.api_gateway_id

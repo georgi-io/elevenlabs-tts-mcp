@@ -80,6 +80,27 @@ resource "aws_lb_target_group" "mcp" {
   }
 }
 
+# Create WebSocket target group
+resource "aws_lb_target_group" "ws" {
+  name        = "${var.service_name}-ws"
+  port        = var.container_port
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    protocol            = "HTTP"
+    path                = "/health"
+    port                = "traffic-port"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+    matcher             = "200"
+  }
+}
+
 # Create path-based routing rules on the ALB for HTTPS
 resource "aws_lb_listener_rule" "api_https" {
   listener_arn = var.central_alb_https_listener_arn
@@ -92,7 +113,7 @@ resource "aws_lb_listener_rule" "api_https" {
 
   condition {
     path_pattern {
-      values = ["/jessica/*"]
+      values = ["/jessica-service/*"]
     }
   }
 }
@@ -108,7 +129,23 @@ resource "aws_lb_listener_rule" "mcp_https" {
 
   condition {
     path_pattern {
-      values = ["/jessica/sse/*"]
+      values = ["/jessica-service/mcp/*"]
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "ws_https" {
+  listener_arn = var.central_alb_https_listener_arn
+  priority     = 102 # Choose a unique priority
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.ws.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/jessica-service/ws*"]
     }
   }
 }
@@ -206,6 +243,9 @@ resource "aws_ecs_task_definition" "service" {
   ])
 }
 
+# Get current AWS region
+data "aws_region" "current" {}
+
 # Create ECS Service
 resource "aws_ecs_service" "service" {
   name            = var.service_name
@@ -231,6 +271,12 @@ resource "aws_ecs_service" "service" {
     target_group_arn = aws_lb_target_group.mcp.arn
     container_name   = var.service_name
     container_port   = var.mcp_port
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.ws.arn
+    container_name   = var.service_name
+    container_port   = var.container_port
   }
 
   # Additional service configuration...
@@ -279,7 +325,4 @@ resource "aws_appautoscaling_scheduled_action" "scale_down" {
     min_capacity = 0
     max_capacity = 0
   }
-}
-
-# Get current AWS region
-data "aws_region" "current" {} 
+} 

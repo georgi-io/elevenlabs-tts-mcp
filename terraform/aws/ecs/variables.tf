@@ -66,7 +66,7 @@ variable "scale_down_cron" {
 variable "api_gateway_route_key" {
   description = "API Gateway route key for this service"
   type        = string
-  default     = "ANY /jessica/{proxy+}"
+  default     = "ANY /jessica-service/{proxy+}"
 }
 
 variable "environment_variables" {

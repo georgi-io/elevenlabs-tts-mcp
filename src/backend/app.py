@@ -19,6 +19,7 @@ load_dotenv()
 # Get port configurations from environment variables
 PORT = int(os.getenv("PORT", 9020))
 MCP_PORT = int(os.getenv("MCP_PORT", 9022))
+BASE_PATH = os.getenv("BASE_PATH", "")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +29,7 @@ app = FastAPI(
     title="ElevenLabs TTS MCP",
     description="Text-to-Speech service using ElevenLabs API",
     version="0.1.0",
+    root_path=BASE_PATH,
 )
 
 # CORS middleware configuration
@@ -144,6 +146,32 @@ async def jessica_api_health_check():
         "config_loaded": bool(config),
         "mcp_enabled": True,
         "path": "jessica/api/health",
+    }
+
+
+# Neue Route für /jessica-service/health
+@app.get("/jessica-service/health")
+async def jessica_service_health_check():
+    return {
+        "status": "healthy",
+        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
+        "config_loaded": bool(config),
+        "mcp_enabled": True,
+        "path": "jessica-service/health",
+        "base_path": BASE_PATH,
+    }
+
+
+# Neue Route für /jessica-service/api/health
+@app.get("/jessica-service/api/health")
+async def jessica_service_api_health_check():
+    return {
+        "status": "healthy",
+        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
+        "config_loaded": bool(config),
+        "mcp_enabled": True,
+        "path": "jessica-service/api/health",
+        "base_path": BASE_PATH,
     }
 
 

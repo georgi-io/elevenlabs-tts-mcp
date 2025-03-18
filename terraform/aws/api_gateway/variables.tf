@@ -8,18 +8,6 @@ variable "vpc_link_id" {
   type        = string
 }
 
-variable "api_gateway_route_key" {
-  description = "Route key for the API Gateway (for the API endpoint)"
-  type        = string
-  default     = "ANY /jessica/{proxy+}"
-}
-
-variable "mcp_gateway_route_key" {
-  description = "Route key for the API Gateway (for the MCP server endpoint)"
-  type        = string
-  default     = "ANY /jessica/sse/{proxy+}"
-}
-
 variable "central_alb_https_listener_arn" {
   description = "ARN of the HTTPS listener of the central ALB"
   type        = string

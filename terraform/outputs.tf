@@ -85,24 +85,14 @@ output "cloudwatch_log_group_name" {
 }
 
 # API Gateway outputs
-output "api_route_key" {
-  description = "Route key for the API Gateway API route"
-  value       = module.api_gateway.api_route_key
-}
-
-output "mcp_route_key" {
-  description = "Route key for the API Gateway MCP route"
-  value       = module.api_gateway.mcp_route_key
-}
-
 output "api_endpoint" {
   description = "API endpoint for Jessica"
-  value       = "https://api.run.georgi.io/jessica"
+  value       = "https://api.run.georgi.io/jessica-service"
 }
 
 output "mcp_endpoint" {
   description = "MCP server endpoint for Jessica"
-  value       = "https://api.run.georgi.io/jessica/sse"
+  value       = "https://api.run.georgi.io/jessica-service/mcp/sse"
 }
 
 # Central infrastructure outputs that might be useful for this service
