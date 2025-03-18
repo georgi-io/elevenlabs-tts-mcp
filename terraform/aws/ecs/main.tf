@@ -71,7 +71,7 @@ resource "aws_lb_target_group" "mcp" {
     enabled             = true
     protocol            = "HTTP"
     path                = "/health"
-    port                = var.container_port # Use the main API port for health checks
+    port                = var.container_port # Wir verwenden den API-Port für die Health-Checks
     healthy_threshold   = 3
     unhealthy_threshold = 3
     timeout             = 5
@@ -260,19 +260,21 @@ resource "aws_ecs_service" "service" {
     assign_public_ip = false
   }
 
-  # Register with the target groups
+  # Load balancer configuration for API
   load_balancer {
     target_group_arn = aws_lb_target_group.api.arn
     container_name   = var.service_name
     container_port   = var.container_port
   }
 
+  # Load balancer configuration for MCP
   load_balancer {
     target_group_arn = aws_lb_target_group.mcp.arn
     container_name   = var.service_name
     container_port   = var.mcp_port
   }
 
+  # Load balancer configuration for WebSocket
   load_balancer {
     target_group_arn = aws_lb_target_group.ws.arn
     container_name   = var.service_name

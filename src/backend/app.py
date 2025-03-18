@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import yaml
 import os
@@ -58,7 +58,7 @@ app.include_router(router)
 app.add_websocket_route("/ws", websocket_endpoint)
 
 # Initialize MCP server
-mcp_server = FastMCP("ElevenLabs TTS")
+mcp_server = FastMCP("Jessica MCP Service")
 # Configure MCP server to use the port from environment variables
 mcp_server.settings.port = MCP_PORT
 register_mcp_tools(mcp_server)
@@ -90,3 +90,10 @@ async def jessica_service_health_check():
         "path": "jessica-service/health",
         "base_path": BASE_PATH,
     }
+
+
+# Direkte Route für MCP/SSE auf dem Hauptanwendungspfad
+@app.get("/mcp/sse")
+async def direct_mcp_sse(request: Request):
+    """MCP SSE endpoint für Cursor integration direkt auf der Hauptanwendung."""
+    return await mcp_server.run_sse(request)
