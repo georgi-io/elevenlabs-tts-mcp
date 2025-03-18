@@ -162,3 +162,12 @@ async def log_all_requests(request: Request, call_next):
     response = await call_next(request)
     logger.info(f"DEBUG: Response for {path}: {response.status_code}")
     return response
+
+
+# Catch-all Route für Debugging-Zwecke
+@app.get("/{path:path}")
+async def catch_all(path: str, request: Request):
+    """Catch-all route for debugging."""
+    logger.error(f"DEBUG-CATCHALL: Received request for path: /{path}, full URL: {request.url}")
+    logger.error(f"DEBUG-CATCHALL: Headers: {request.headers}")
+    return {"message": f"Received request for /{path}"}
