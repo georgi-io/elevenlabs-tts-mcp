@@ -104,10 +104,10 @@ async def redirect_to_mcp_sse():
 
 
 # Neue Route explizit für /jessica-service/sse, die direkt zum MCP-Server auf Port 9022 weiterleitet
-@app.get("/jessica-service/sse")
+@app.get("/sse")
 async def redirect_jessica_service_sse():
-    """Redirect to MCP SSE endpoint when requested at /jessica-service/sse."""
-    logger.info(f"Redirecting /jessica-service/sse to MCP server at port {MCP_PORT}")
+    """Redirect to MCP SSE endpoint when requested at /sse with BASE_PATH prefix."""
+    logger.info(f"Redirecting to MCP server at port {MCP_PORT}, BASE_PATH={BASE_PATH}")
     from fastapi.responses import RedirectResponse
 
     return RedirectResponse(url=f"http://localhost:{MCP_PORT}/sse")
