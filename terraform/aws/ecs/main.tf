@@ -111,6 +111,7 @@ resource "aws_lb_listener_rule" "api_https" {
     target_group_arn = aws_lb_target_group.api.arn
   }
 
+  # Exclude /jessica-service/sse* and /jessica-service/ws* paths, handle all other /jessica-service/ paths
   condition {
     path_pattern {
       values = ["/jessica-service/*"]
@@ -120,7 +121,7 @@ resource "aws_lb_listener_rule" "api_https" {
 
 resource "aws_lb_listener_rule" "mcp_https" {
   listener_arn = var.central_alb_https_listener_arn
-  priority     = 101 # Choose a unique priority
+  priority     = 90 # Higher priority (lower number) than the API rule
 
   action {
     type             = "forward"
@@ -136,7 +137,7 @@ resource "aws_lb_listener_rule" "mcp_https" {
 
 resource "aws_lb_listener_rule" "ws_https" {
   listener_arn = var.central_alb_https_listener_arn
-  priority     = 102 # Choose a unique priority
+  priority     = 91 # Higher priority (lower number) than the API rule but lower than MCP
 
   action {
     type             = "forward"

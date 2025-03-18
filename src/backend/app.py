@@ -10,6 +10,7 @@ from .websocket import websocket_endpoint
 from mcp.server.fastmcp import FastMCP
 import logging
 from .mcp_tools import register_mcp_tools
+from fastapi import Request
 
 # Load environment variables
 load_dotenv()
@@ -92,6 +93,16 @@ async def jessica_service_health_check():
     }
 
 
+# Neue Route für /sse, die direkt zum MCP-Server auf Port 9022 weiterleitet
+@app.get("/sse")
+async def redirect_to_mcp_sse():
+    """Redirect to MCP SSE endpoint."""
+    logger.info(f"Redirecting to MCP server at port {MCP_PORT}")
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url=f"http://localhost:{MCP_PORT}/sse")
+
+
 # Health-Check Route direkt auf Root-Pfad für AWS Health-Checks
 @app.get("/health")
 async def root_health_check():
@@ -104,3 +115,40 @@ async def root_health_check():
         "path": "health",
         "base_path": BASE_PATH,
     }
+
+
+@app.middleware("http")
+async def log_all_requests(request: Request, call_next):
+    """Log all incoming requests for debugging."""
+    path = request.url.path
+    logger.info(
+        f"DEBUG: Incoming request to path: {path}, method: {request.method}, client: {request.client}"
+    )
+
+    if path.endswith("/sse"):
+        logger.info(f"DEBUG: SSE request detected - BASE_PATH={BASE_PATH}, path={path}")
+        # Teste, ob der MCP-Server auf dem erwarteten Port lauscht
+        import socket
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1)
+        try:
+            s.connect(("localhost", MCP_PORT))
+            logger.info(f"DEBUG: MCP server is reachable on port {MCP_PORT}")
+            s.close()
+        except Exception as e:
+            logger.error(f"DEBUG: MCP server is NOT reachable on port {MCP_PORT}: {e}")
+
+        # Versuche zu prüfen, ob MCP_PORT an eine bestimmte Netzwerkschnittstelle gebunden ist
+        try:
+            import psutil
+
+            for conn in psutil.net_connections():
+                if conn.laddr.port == MCP_PORT:
+                    logger.info(f"DEBUG: Process using port {MCP_PORT}: {conn}")
+        except Exception as e:
+            logger.error(f"DEBUG: Could not check processes using port {MCP_PORT}: {e}")
+
+    response = await call_next(request)
+    logger.info(f"DEBUG: Response for {path}: {response.status_code}")
+    return response
