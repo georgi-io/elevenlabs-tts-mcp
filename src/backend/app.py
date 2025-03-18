@@ -103,6 +103,16 @@ async def redirect_to_mcp_sse():
     return RedirectResponse(url=f"http://localhost:{MCP_PORT}/sse")
 
 
+# Neue Route explizit für /jessica-service/sse, die direkt zum MCP-Server auf Port 9022 weiterleitet
+@app.get("/jessica-service/sse")
+async def redirect_jessica_service_sse():
+    """Redirect to MCP SSE endpoint when requested at /jessica-service/sse."""
+    logger.info(f"Redirecting /jessica-service/sse to MCP server at port {MCP_PORT}")
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url=f"http://localhost:{MCP_PORT}/sse")
+
+
 # Health-Check Route direkt auf Root-Pfad für AWS Health-Checks
 @app.get("/health")
 async def root_health_check():
