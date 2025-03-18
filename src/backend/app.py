@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import yaml
 import os
@@ -90,13 +90,6 @@ async def jessica_service_health_check():
         "path": "jessica-service/health",
         "base_path": BASE_PATH,
     }
-
-
-# Direkte Route für MCP/SSE auf dem Hauptanwendungspfad
-@app.get("/mcp/sse")
-async def direct_mcp_sse(request: Request):
-    """MCP SSE endpoint für Cursor integration direkt auf der Hauptanwendung."""
-    return await mcp_server.run_sse(request)
 
 
 # Health-Check Route direkt auf Root-Pfad für AWS Health-Checks

@@ -129,7 +129,7 @@ resource "aws_lb_listener_rule" "mcp_https" {
 
   condition {
     path_pattern {
-      values = ["/jessica-service/mcp/*"]
+      values = ["/jessica-service/sse*"]
     }
   }
 }

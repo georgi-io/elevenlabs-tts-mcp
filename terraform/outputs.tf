@@ -102,7 +102,7 @@ output "api_endpoint" {
 
 output "mcp_endpoint" {
   description = "MCP server endpoint for Jessica"
-  value       = "https://api.run.georgi.io/jessica-service/mcp/sse"
+  value       = "https://api.run.georgi.io/jessica-service/sse"
 }
 
 # Central infrastructure outputs that might be useful for this service

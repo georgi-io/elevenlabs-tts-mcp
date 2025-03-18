@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import json
@@ -233,11 +233,3 @@ async def update_config(request: ConfigRequest):
         return current_config
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update configuration: {str(e)}")
-
-
-@router.get("/mcp/sse")
-async def mcp_sse(request: Request):
-    """MCP SSE endpoint for Cursor integration."""
-    from .app import mcp_server
-
-    return await mcp_server.run_sse(request)
