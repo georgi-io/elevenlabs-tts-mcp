@@ -34,11 +34,6 @@ variable "container_port" {
   type        = number
 }
 
-variable "mcp_port" {
-  description = "Port for the MCP server"
-  type        = number
-}
-
 variable "tls_server_name" {
   description = "Server name to verify in the TLS handshake"
   type        = string

@@ -80,7 +80,7 @@ python -m src.backend
 The backend provides:
 - REST API: http://localhost:9020
 - WebSocket: ws://localhost:9020/ws
-- MCP Server: http://localhost:9022
+- MCP Server: http://localhost:9020/sse (integrated with the main API server)
 
 ### Starting the Frontend
 
@@ -102,7 +102,6 @@ ELEVENLABS_API_KEY=your-api-key
 # Server Configuration
 HOST=127.0.0.1
 PORT=9020
-MCP_PORT=9022
 
 # Development Settings
 DEBUG=false
@@ -186,7 +185,7 @@ This approach eliminates the need to manually configure GitHub repository variab
 2. In Cursor settings, add new MCP server:
    - Name: Jessica TTS
    - Type: SSE
-   - URL: http://localhost:9022/sse
+   - URL: http://localhost:9020/sse
 
 ## Troubleshooting
 
