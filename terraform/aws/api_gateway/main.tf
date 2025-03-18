@@ -17,4 +17,16 @@ resource "aws_apigatewayv2_integration" "api" {
   }
 }
 
+# Statt zu versuchen, die Route zu erstellen/aktualisieren, erstellen wir einen null_resource,
+# der einen AWS CLI-Befehl ausführt, um die Route zu aktualisieren
+resource "null_resource" "update_route" {
+  triggers = {
+    integration_id = aws_apigatewayv2_integration.api.id
+  }
+
+  provisioner "local-exec" {
+    command = "aws apigatewayv2 update-route --api-id ${var.api_gateway_id} --route-id ${var.route_id} --target integrations/${aws_apigatewayv2_integration.api.id} --profile ${var.aws_profile}"
+  }
+}
+
 # Die Route wird zentral verwaltet und wird von der zentralen Infrastruktur bereitgestellt 

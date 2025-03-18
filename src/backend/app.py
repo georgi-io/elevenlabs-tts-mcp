@@ -1,7 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 import yaml
 import os
 import threading
@@ -59,28 +57,6 @@ app.include_router(router)
 # Add WebSocket endpoint
 app.add_websocket_route("/ws", websocket_endpoint)
 
-# Create static directory if it doesn't exist
-static_dir = Path(__file__).parent / "static"
-static_dir.mkdir(exist_ok=True)
-
-# Log the static directory path for debugging
-logger.info(f"Static directory path: {static_dir.absolute()}")
-
-# List files in the static directory
-if static_dir.exists():
-    logger.info(f"Files in static directory: {[f.name for f in static_dir.iterdir()]}")
-else:
-    logger.warning(f"Static directory does not exist: {static_dir.absolute()}")
-
-# Create assets directory if it doesn't exist
-assets_dir = static_dir / "assets"
-assets_dir.mkdir(exist_ok=True)
-
-# Mount static files
-app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
-# Mount the entire static directory to serve all static files
-app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-
 # Initialize MCP server
 mcp_server = FastMCP("ElevenLabs TTS")
 # Configure MCP server to use the port from environment variables
@@ -103,52 +79,6 @@ async def startup_event():
     logger.info(f"MCP server running at http://localhost:{MCP_PORT}/sse")
 
 
-@app.get("/")
-async def root():
-    # Check if index.html exists in static directory
-    index_path = static_dir / "index.html"
-    logger.info(f"Checking for index.html at: {index_path.absolute()}")
-    if index_path.exists():
-        logger.info(f"Serving index.html from {index_path}")
-        return FileResponse(str(index_path))
-    logger.warning("index.html not found in static directory")
-    return {"status": "ok", "service": "elevenlabs-tts-mcp"}
-
-
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
-        "config_loaded": bool(config),
-        "mcp_enabled": True,
-    }
-
-
-# Explizite Route für /jessica/health für den ALB Health Check
-@app.get("/jessica/health")
-async def jessica_health_check():
-    return {
-        "status": "healthy",
-        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
-        "config_loaded": bool(config),
-        "mcp_enabled": True,
-        "path": "jessica/health",
-    }
-
-
-# Explizite Route für /jessica/api/health für externe API-Aufrufe
-@app.get("/jessica/api/health")
-async def jessica_api_health_check():
-    return {
-        "status": "healthy",
-        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
-        "config_loaded": bool(config),
-        "mcp_enabled": True,
-        "path": "jessica/api/health",
-    }
-
-
 # Neue Route für /jessica-service/health
 @app.get("/jessica-service/health")
 async def jessica_service_health_check():
@@ -160,34 +90,3 @@ async def jessica_service_health_check():
         "path": "jessica-service/health",
         "base_path": BASE_PATH,
     }
-
-
-# Neue Route für /jessica-service/api/health
-@app.get("/jessica-service/api/health")
-async def jessica_service_api_health_check():
-    return {
-        "status": "healthy",
-        "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
-        "config_loaded": bool(config),
-        "mcp_enabled": True,
-        "path": "jessica-service/api/health",
-        "base_path": BASE_PATH,
-    }
-
-
-# Catch-all route to serve the frontend for any non-API routes
-@app.get("/{full_path:path}")
-async def serve_frontend(full_path: str):
-    # Skip API routes und jessica/api routes
-    if full_path.startswith("api/") or full_path.startswith("jessica/api/"):
-        raise HTTPException(status_code=404, detail="Not found")
-
-    # Serve index.html for all other routes (SPA support)
-    index_path = static_dir / "index.html"
-    if index_path.exists():
-        logger.info(f"Serving index.html for path: {full_path}")
-        return FileResponse(str(index_path))
-
-    # If frontend is not built yet
-    logger.warning(f"Frontend not built yet, requested path: {full_path}")
-    return {"status": "frontend_not_built", "message": "Frontend has not been built yet"}

@@ -85,6 +85,16 @@ output "cloudwatch_log_group_name" {
 }
 
 # API Gateway outputs
+output "api_route_key" {
+  description = "Route key for the API Gateway API route"
+  value       = module.api_gateway.api_route_key
+}
+
+output "api_route_id" {
+  description = "ID of the API Gateway route"
+  value       = module.api_gateway.api_route_id
+}
+
 output "api_endpoint" {
   description = "API endpoint for Jessica"
   value       = "https://api.run.georgi.io/jessica-service"

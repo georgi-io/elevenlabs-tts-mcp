@@ -3,9 +3,20 @@ variable "api_gateway_id" {
   type        = string
 }
 
+variable "route_id" {
+  description = "ID of the existing API Gateway route that needs to be updated"
+  type        = string
+}
+
 variable "vpc_link_id" {
   description = "ID of the VPC Link from the infrastructure remote state"
   type        = string
+}
+
+variable "aws_profile" {
+  description = "AWS Profile to use for AWS CLI commands"
+  type        = string
+  default     = "georgi-io"
 }
 
 variable "central_alb_https_listener_arn" {

@@ -130,8 +130,14 @@ module "api_gateway" {
   container_port = 9020
   mcp_port = 9022
   
+  # Route ID from CLI test
+  route_id = "obtwkmk"
+  
   # TLS configuration
   tls_server_name = "api.run.georgi.io"
+  
+  # AWS profile
+  aws_profile = var.aws_profile
   
   # Pass infrastructure outputs
   api_gateway_id = data.terraform_remote_state.infrastructure.outputs.api_gateway_id
