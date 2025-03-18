@@ -13,11 +13,6 @@ output "container_port" {
   value       = var.container_port
 }
 
-output "mcp_port" {
-  description = "Container port for the MCP server"
-  value       = var.mcp_port
-}
-
 output "task_definition_arn" {
   description = "ARN of the task definition"
   value       = aws_ecs_task_definition.service.arn
@@ -53,17 +48,7 @@ output "api_target_group_arn" {
   value       = aws_lb_target_group.api.arn
 }
 
-output "mcp_target_group_arn" {
-  description = "ARN of the ALB target group for the MCP server"
-  value       = aws_lb_target_group.mcp.arn
-}
-
 output "api_listener_rule_arn" {
   description = "ARN of the ALB listener rule for the API"
   value       = aws_lb_listener_rule.api_https.arn
-}
-
-output "mcp_listener_rule_arn" {
-  description = "ARN of the ALB listener rule for the MCP server"
-  value       = aws_lb_listener_rule.mcp_https.arn
 } 

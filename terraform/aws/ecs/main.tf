@@ -18,14 +18,6 @@ resource "aws_security_group" "service" {
     cidr_blocks     = ["0.0.0.0/0"] # NLB is transparent, so traffic appears to come directly from clients
   }
 
-  ingress {
-    from_port       = var.mcp_port
-    to_port         = var.mcp_port
-    protocol        = "tcp"
-    description     = "Allow traffic from NLB to MCP port"
-    cidr_blocks     = ["0.0.0.0/0"]
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -52,26 +44,6 @@ resource "aws_lb_target_group" "api" {
     protocol            = "HTTP"
     path                = "/health"
     port                = "traffic-port"
-    healthy_threshold   = 3
-    unhealthy_threshold = 3
-    timeout             = 5
-    interval            = 30
-    matcher             = "200"
-  }
-}
-
-resource "aws_lb_target_group" "mcp" {
-  name        = "${var.service_name}-mcp"
-  port        = var.mcp_port
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip"
-
-  health_check {
-    enabled             = true
-    protocol            = "HTTP"
-    path                = "/health"
-    port                = var.container_port # Wir verwenden den API-Port für die Health-Checks
     healthy_threshold   = 3
     unhealthy_threshold = 3
     timeout             = 5
@@ -115,22 +87,6 @@ resource "aws_lb_listener_rule" "api_https" {
   condition {
     path_pattern {
       values = ["/jessica-service/*"]
-    }
-  }
-}
-
-resource "aws_lb_listener_rule" "mcp_https" {
-  listener_arn = var.central_alb_https_listener_arn
-  priority     = 90 # Higher priority (lower number) than the API rule
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.mcp.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/jessica-service/sse*"]
     }
   }
 }
@@ -213,11 +169,6 @@ resource "aws_ecs_task_definition" "service" {
           containerPort = var.container_port
           hostPort      = var.container_port
           protocol      = "tcp"
-        },
-        {
-          containerPort = var.mcp_port
-          hostPort      = var.mcp_port
-          protocol      = "tcp"
         }
       ]
       environment = [
@@ -266,13 +217,6 @@ resource "aws_ecs_service" "service" {
     target_group_arn = aws_lb_target_group.api.arn
     container_name   = var.service_name
     container_port   = var.container_port
-  }
-
-  # Load balancer configuration for MCP
-  load_balancer {
-    target_group_arn = aws_lb_target_group.mcp.arn
-    container_name   = var.service_name
-    container_port   = var.mcp_port
   }
 
   # Load balancer configuration for WebSocket

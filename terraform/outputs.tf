@@ -54,29 +54,14 @@ output "ecs_container_port" {
   value       = module.ecs.container_port
 }
 
-output "ecs_mcp_port" {
-  description = "Port exposed by the container for the MCP server"
-  value       = module.ecs.mcp_port
-}
-
 output "api_target_group_arn" {
   description = "ARN of the ALB target group for the API"
   value       = module.ecs.api_target_group_arn
 }
 
-output "mcp_target_group_arn" {
-  description = "ARN of the ALB target group for the MCP server"
-  value       = module.ecs.mcp_target_group_arn
-}
-
 output "api_listener_rule_arn" {
   description = "ARN of the ALB listener rule for the API"
   value       = module.ecs.api_listener_rule_arn
-}
-
-output "mcp_listener_rule_arn" {
-  description = "ARN of the ALB listener rule for the MCP server"
-  value       = module.ecs.mcp_listener_rule_arn
 }
 
 output "cloudwatch_log_group_name" {
