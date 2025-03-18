@@ -26,12 +26,13 @@ RUN poetry install --only main --no-interaction --no-ansi
 RUN chmod -R 755 /app
 
 # Port, auf dem das Backend läuft, exponieren
-EXPOSE 9020
+EXPOSE 9020 9022
 
 # Umgebungsvariablen setzen (können durch externe .env oder ENV überschrieben werden)
 ENV HOST=0.0.0.0
 ENV PORT=9020
-ENV BASE_PATH=/jessica-service
+ENV MCP_HOST=0.0.0.0
+ENV MCP_PORT=9022
 
 # Anwendung starten
 CMD ["python", "-m", "src.backend"] 

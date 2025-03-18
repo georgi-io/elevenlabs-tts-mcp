@@ -89,6 +89,7 @@ module "ecs" {
   service_name = "jessica"
   container_image = "${module.ecr.repository_url}:latest"
   container_port = 9020
+  mcp_port = 9022
   
   cpu = 512
   memory = 1024
@@ -109,6 +110,7 @@ module "ecs" {
   environment_variables = {
     HOST = "0.0.0.0"
     PORT = "9020"
+    MCP_PORT = "9022"
     DEBUG = "false"
     BASE_PATH = "/jessica-service"
   }
@@ -126,6 +128,7 @@ module "api_gateway" {
   # Service information
   service_name = "jessica"
   container_port = 9020
+  mcp_port = 9022
   
   # Route ID from CLI test
   route_id = "obtwkmk"

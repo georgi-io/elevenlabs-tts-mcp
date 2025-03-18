@@ -21,6 +21,12 @@ variable "host_port" {
   default     = 9020
 }
 
+variable "mcp_port" {
+  description = "Port for the MCP (Model Context Protocol) server"
+  type        = number
+  default     = 9022
+}
+
 variable "cpu" {
   description = "CPU units for the task (1024 = 1 vCPU)"
   type        = number
