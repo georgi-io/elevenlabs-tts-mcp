@@ -18,18 +18,66 @@ load_dotenv()
 # Get port configurations from environment variables
 PORT = int(os.getenv("PORT", 9020))
 HOST = os.getenv("HOST", "localhost")
-BASE_PATH = os.getenv("BASE_PATH", "")
+ROOT_PATH = os.getenv("ROOT_PATH", "")
+MCP_PORT = int(os.getenv("MCP_PORT", 9022))
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
+# Normalisiere ROOT_PATH
+if ROOT_PATH:
+    # Mit / beginnen
+    if not ROOT_PATH.startswith("/"):
+        ROOT_PATH = f"/{ROOT_PATH}"
+
+    # Nicht mit / enden
+    if ROOT_PATH.endswith("/"):
+        ROOT_PATH = ROOT_PATH[:-1]
+
+    logger.info(f"Using ROOT_PATH: {ROOT_PATH}")
+
 app = FastAPI(
-    title="ElevenLabs TTS MCP",
+    title="Jessica TTS MCP",
     description="Text-to-Speech service using ElevenLabs API",
     version="0.1.0",
-    root_path=BASE_PATH,
+    root_path=ROOT_PATH,
 )
+
+
+# Path rewriting middleware - MUST be first in the middleware chain
+@app.middleware("http")
+async def rewrite_path_middleware(request: Request, call_next):
+    """
+    Middleware that rewrites incoming request paths by removing the ROOT_PATH prefix.
+
+    This allows FastAPI to handle both direct requests and requests coming through
+    API Gateway or ALB with a path prefix.
+    """
+    original_path = request.url.path
+
+    # Debug output of original path
+    logger.debug(f"Original path: {original_path}")
+
+    # Only rewrite if ROOT_PATH is set and path starts with it
+    if ROOT_PATH and original_path.startswith(ROOT_PATH):
+        # Remove the ROOT_PATH prefix from the path
+        new_path = original_path[len(ROOT_PATH) :]
+        # Ensure the path starts with a slash
+        if not new_path.startswith("/"):
+            new_path = "/" + new_path
+
+        # Create modified request scope with new path
+        request.scope["path"] = new_path
+
+        # Update the root_path in the scope
+        request.scope["root_path"] = ROOT_PATH
+
+        logger.debug(f"Path rewritten: {original_path} -> {new_path} (root_path={ROOT_PATH})")
+
+    # Process the request with the rewritten path
+    return await call_next(request)
+
 
 # CORS middleware configuration
 app.add_middleware(
@@ -39,6 +87,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Logging middleware (after path rewriting)
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log information about all incoming requests."""
+    logger.info(f"Request path: {request.url.path}")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"ROOT_PATH: {ROOT_PATH}")
+
+    response = await call_next(request)
+
+    logger.info(f"{request.method} {request.url.path} - {response.status_code}")
+    return response
 
 
 # Load configuration
@@ -90,8 +152,8 @@ async def handle_messages(request: Request, path: str):
 @app.on_event("startup")
 async def startup_event():
     # Log the server URLs
-    logger.info(f"Backend server listening on {HOST}:{PORT}{BASE_PATH}")
-    logger.info(f"MCP server integrated on {BASE_PATH}/sse")
+    logger.info(f"Backend server listening on {HOST}:{PORT}{ROOT_PATH}")
+    logger.info(f"MCP server integrated on {ROOT_PATH}/sse")
 
 
 @app.get("/health")
@@ -101,8 +163,8 @@ async def jessica_service_health_check():
         "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
         "config_loaded": bool(config),
         "mcp_enabled": True,
-        "path": f"{BASE_PATH}/health",
-        "base_path": BASE_PATH,
+        "path": f"{ROOT_PATH}/health",
+        "root_path": ROOT_PATH,
     }
 
 

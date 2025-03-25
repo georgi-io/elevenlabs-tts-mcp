@@ -1,3 +1,4 @@
+src/auth-service
 .ruff_cache/
 # Dependencies
 node_modules/
