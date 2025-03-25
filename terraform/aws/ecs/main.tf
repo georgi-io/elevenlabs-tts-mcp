@@ -42,12 +42,12 @@ resource "aws_lb_target_group" "api" {
   health_check {
     enabled             = true
     protocol            = "HTTP"
-    path                = "/health"  # Korrekter Pfad ohne Präfix, da Container direkt angesprochen wird
+    path                = "/jessica/health"
     port                = "traffic-port"
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 3
-    interval            = 10
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
     matcher             = "200"
   }
 }
@@ -63,12 +63,12 @@ resource "aws_lb_target_group" "ws" {
   health_check {
     enabled             = true
     protocol            = "HTTP"
-    path                = "/health"  # Korrekter Pfad ohne Präfix, da Container direkt angesprochen wird
+    path                = "/jessica/health"
     port                = "traffic-port"
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 3
-    interval            = 10
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
     matcher             = "200"
   }
 }
@@ -86,7 +86,7 @@ resource "aws_lb_listener_rule" "api_https" {
   # Exclude /jessica-service/sse* and /jessica-service/ws* paths, handle all other /jessica-service/ paths
   condition {
     path_pattern {
-      values = ["/jessica-service/*"]
+      values = ["/jessica/*"]
     }
   }
 }
@@ -102,7 +102,7 @@ resource "aws_lb_listener_rule" "ws_https" {
 
   condition {
     path_pattern {
-      values = ["/jessica-service/ws*"]
+      values = ["/jessica/ws*"]
     }
   }
 }
@@ -193,11 +193,11 @@ resource "aws_ecs_task_definition" "service" {
       
       # Health check configuration for direct container health checks - optimiert für schnelle Redeploys
       healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/health || exit 1"]
-        interval    = 10
-        timeout     = 3
-        retries     = 2
-        startPeriod = 5
+        command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/jessica/health || exit 1"]
+        interval    = 30
+        timeout     = 5
+        retries     = 3
+        startPeriod = 30
       }
       
       logConfiguration = {
@@ -226,7 +226,7 @@ resource "aws_ecs_service" "service" {
   # Optimieren für schnelle Deployment-Zeiten
   deployment_maximum_percent = 200
   deployment_minimum_healthy_percent = 100
-  health_check_grace_period_seconds = 15
+  health_check_grace_period_seconds = 60
 
   network_configuration {
     subnets          = var.private_subnet_ids

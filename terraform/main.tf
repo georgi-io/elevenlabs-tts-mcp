@@ -48,7 +48,7 @@ resource "aws_ssm_parameter" "jessica_base_path" {
   name        = "/jessica/${var.environment}/base-path"
   description = "Base path for Jessica service"
   type        = "String"
-  value       = "jessica-service"
+  value       = "jessica"
   
   tags = {
     Environment = var.environment
@@ -60,7 +60,7 @@ resource "aws_ssm_parameter" "jessica_root_path" {
   name        = "/jessica/${var.environment}/root-path"
   description = "ROOT_PATH for Jessica service (with leading slash)"
   type        = "String"
-  value       = "/jessica-service"
+  value       = "/jessica"
   
   tags = {
     Environment = var.environment
@@ -72,7 +72,7 @@ resource "aws_ssm_parameter" "jessica_api_url" {
   name        = "/jessica/${var.environment}/api-url"
   description = "API URL for Jessica service"
   type        = "String"
-  value       = "https://api.run.georgi.io/jessica-service"
+  value       = "https://api.run.georgi.io/jessica"
   
   tags = {
     Environment = var.environment
