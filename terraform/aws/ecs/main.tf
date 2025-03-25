@@ -42,7 +42,7 @@ resource "aws_lb_target_group" "api" {
   health_check {
     enabled             = true
     protocol            = "HTTP"
-    path                = "/jessica/health"
+    path                = "/jessica-service/health"
     port                = "traffic-port"
     healthy_threshold   = 3
     unhealthy_threshold = 3
@@ -63,7 +63,7 @@ resource "aws_lb_target_group" "ws" {
   health_check {
     enabled             = true
     protocol            = "HTTP"
-    path                = "/jessica/health"
+    path                = "/jessica-service/health"
     port                = "traffic-port"
     healthy_threshold   = 3
     unhealthy_threshold = 3
@@ -86,7 +86,7 @@ resource "aws_lb_listener_rule" "api_https" {
   # Exclude /jessica-service/sse* and /jessica-service/ws* paths, handle all other /jessica-service/ paths
   condition {
     path_pattern {
-      values = ["/jessica/*"]
+      values = ["/jessica-service/*"]
     }
   }
 }
@@ -102,7 +102,7 @@ resource "aws_lb_listener_rule" "ws_https" {
 
   condition {
     path_pattern {
-      values = ["/jessica/ws*"]
+      values = ["/jessica-service/ws*"]
     }
   }
 }
@@ -193,7 +193,7 @@ resource "aws_ecs_task_definition" "service" {
       
       # Health check configuration for direct container health checks - optimiert für schnelle Redeploys
       healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/jessica/health || exit 1"]
+        command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/jessica-service/health || exit 1"]
         interval    = 30
         timeout     = 5
         retries     = 3
