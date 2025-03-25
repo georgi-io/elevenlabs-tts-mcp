@@ -8,8 +8,8 @@ from .elevenlabs_client import ElevenLabsClient
 from .websocket import manager
 from fastapi.responses import StreamingResponse
 
-# Change the prefix to match the frontend API calls
-router = APIRouter(prefix="/api")
+# Use versioned API prefix to match the auth-service pattern
+router = APIRouter(prefix="/api/v1", tags=["TTS"])
 client = ElevenLabsClient()
 
 # Configuration paths

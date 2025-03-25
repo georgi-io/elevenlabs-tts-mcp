@@ -137,4 +137,9 @@ resource "aws_iam_policy" "ecs_deployment_policy" {
 resource "aws_iam_role_policy_attachment" "github_actions_ecs_policy_attachment" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.ecs_deployment_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_attachment" {
+  role       = aws_iam_role.github_actions_role.name
+  policy_arn = aws_iam_policy.ecs_deployment_policy.arn
 } 

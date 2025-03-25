@@ -56,6 +56,18 @@ resource "aws_ssm_parameter" "jessica_base_path" {
   }
 }
 
+resource "aws_ssm_parameter" "jessica_root_path" {
+  name        = "/jessica/${var.environment}/root-path"
+  description = "ROOT_PATH for Jessica service (with leading slash)"
+  type        = "String"
+  value       = "/jessica-service"
+  
+  tags = {
+    Environment = var.environment
+    Service     = "jessica"
+  }
+}
+
 resource "aws_ssm_parameter" "jessica_api_url" {
   name        = "/jessica/${var.environment}/api-url"
   description = "API URL for Jessica service"
@@ -140,6 +152,13 @@ resource "aws_iam_policy" "jessica_ssm_access" {
         ]
         Resource = [
           "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/jessica/${var.environment}/*",
+          aws_ssm_parameter.jessica_base_path.arn,
+          aws_ssm_parameter.jessica_root_path.arn,
+          aws_ssm_parameter.jessica_api_url.arn,
+          aws_ssm_parameter.jessica_host.arn, 
+          aws_ssm_parameter.jessica_port.arn,
+          aws_ssm_parameter.jessica_debug.arn,
+          aws_ssm_parameter.jessica_eleven_labs_api_key.arn,
           "arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"
         ]
       }
@@ -217,6 +236,7 @@ module "ecs" {
   # These are now handled as secrets in the task definition
   secrets = {
     "BASE_PATH" = aws_ssm_parameter.jessica_base_path.arn,
+    "ROOT_PATH" = aws_ssm_parameter.jessica_root_path.arn,
     "API_URL" = aws_ssm_parameter.jessica_api_url.arn,
     "HOST" = aws_ssm_parameter.jessica_host.arn,
     "PORT" = aws_ssm_parameter.jessica_port.arn,

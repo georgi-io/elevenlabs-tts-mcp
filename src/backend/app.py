@@ -42,7 +42,30 @@ app = FastAPI(
     description="Text-to-Speech service using ElevenLabs API",
     version="0.1.0",
     root_path=ROOT_PATH,
+    docs_url="/docs",
+    openapi_url="/openapi.json",
+    redoc_url="/redoc",
 )
+
+"""
+Path Rewriting Concept
+
+This service uses a path-rewriting middleware to handle both direct ALB access 
+and API Gateway access with a ROOT_PATH prefix.
+
+The middleware strips the ROOT_PATH prefix from incoming requests before they're processed,
+allowing FastAPI to use its built-in root_path parameter correctly and eliminating the need
+for duplicate routes.
+
+For example:
+- External request to /jessica-service/api/v1/tts
+- Middleware rewrites to /api/v1/tts
+- FastAPI processes the request using its normal routing
+- FastAPI adds ROOT_PATH in generated URLs (docs, redirects, etc.)
+
+This approach simplifies the codebase and ensures consistency between local development
+and production environments.
+"""
 
 
 # Path rewriting middleware - MUST be first in the middleware chain
@@ -59,8 +82,31 @@ async def rewrite_path_middleware(request: Request, call_next):
     # Debug output of original path
     logger.debug(f"Original path: {original_path}")
 
-    # Only rewrite if ROOT_PATH is set and path starts with it
+    # Check for double service paths (e.g. /jessica-service/jessica-service/)
+    double_prefix = False
     if ROOT_PATH and original_path.startswith(ROOT_PATH):
+        remaining_path = original_path[len(ROOT_PATH) :]
+        if remaining_path.startswith(ROOT_PATH):
+            # We found a double prefix
+            double_prefix = True
+            logger.debug(f"Detected double prefix: {original_path}")
+            # Remove both instances of the prefix
+            new_path = remaining_path[len(ROOT_PATH) :]
+            # Ensure the path starts with /
+            if not new_path.startswith("/"):
+                new_path = "/" + new_path
+
+            # Update the request scope
+            request.scope["path"] = new_path
+            request.scope["root_path"] = ROOT_PATH
+
+            logger.debug(
+                f"Path rewritten (double prefix): {original_path} -> {new_path} (root_path={ROOT_PATH})"
+            )
+            return await call_next(request)
+
+    # Only rewrite if ROOT_PATH is set and path starts with it
+    if ROOT_PATH and original_path.startswith(ROOT_PATH) and not double_prefix:
         # Remove the ROOT_PATH prefix from the path
         new_path = original_path[len(ROOT_PATH) :]
         # Ensure the path starts with a slash
@@ -159,19 +205,31 @@ async def startup_event():
 @app.get("/health")
 async def jessica_service_health_check():
     return {
-        "status": "healthy",
+        "status": "ok",
+        "service": "jessica-service",
+        "root_path": ROOT_PATH,
         "elevenlabs_api_key": bool(os.getenv("ELEVENLABS_API_KEY")),
         "config_loaded": bool(config),
         "mcp_enabled": True,
-        "path": f"{ROOT_PATH}/health",
-        "root_path": ROOT_PATH,
     }
 
 
 # Catch-all Route erst danach definieren
 @app.get("/{path:path}")
 async def catch_all(path: str, request: Request):
-    """Catch-all route for debugging."""
+    """
+    Catch-all route for debugging and redirecting misrouted requests.
+
+    This route helps with debugging path issues that might occur with various
+    proxy configurations and ROOT_PATH settings.
+    """
     logger.error(f"DEBUG-CATCHALL: Received request for path: /{path}, full URL: {request.url}")
     logger.error(f"DEBUG-CATCHALL: Headers: {request.headers}")
+
+    # API documentation should be available at /docs when ROOT_PATH is handled correctly
+    if path == "docs" or path == "redoc" or path == "openapi.json":
+        logger.error(
+            f"Documentation URL accessed incorrectly as /{path} - should be at {ROOT_PATH}/docs"
+        )
+
     return {"message": f"Received request for /{path}"}

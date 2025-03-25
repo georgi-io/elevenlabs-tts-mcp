@@ -42,12 +42,12 @@ resource "aws_lb_target_group" "api" {
   health_check {
     enabled             = true
     protocol            = "HTTP"
-    path                = "/health"
+    path                = "/health"  # Korrekter Pfad ohne Präfix, da Container direkt angesprochen wird
     port                = "traffic-port"
-    healthy_threshold   = 3
-    unhealthy_threshold = 3
-    timeout             = 5
-    interval            = 30
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 3
+    interval            = 10
     matcher             = "200"
   }
 }
@@ -63,12 +63,12 @@ resource "aws_lb_target_group" "ws" {
   health_check {
     enabled             = true
     protocol            = "HTTP"
-    path                = "/health"
+    path                = "/health"  # Korrekter Pfad ohne Präfix, da Container direkt angesprochen wird
     port                = "traffic-port"
-    healthy_threshold   = 3
-    unhealthy_threshold = 3
-    timeout             = 5
-    interval            = 30
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 3
+    interval            = 10
     matcher             = "200"
   }
 }
@@ -190,6 +190,16 @@ resource "aws_ecs_task_definition" "service" {
           valueFrom = valueFrom
         }
       ]
+      
+      # Health check configuration for direct container health checks - optimiert für schnelle Redeploys
+      healthCheck = {
+        command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/health || exit 1"]
+        interval    = 10
+        timeout     = 3
+        retries     = 2
+        startPeriod = 5
+      }
+      
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -212,6 +222,11 @@ resource "aws_ecs_service" "service" {
   task_definition = aws_ecs_task_definition.service.arn
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
+  
+  # Optimieren für schnelle Deployment-Zeiten
+  deployment_maximum_percent = 200
+  deployment_minimum_healthy_percent = 100
+  health_check_grace_period_seconds = 15
 
   network_configuration {
     subnets          = var.private_subnet_ids
