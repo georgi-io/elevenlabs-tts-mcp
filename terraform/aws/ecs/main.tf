@@ -193,7 +193,10 @@ resource "aws_ecs_task_definition" "service" {
       
       # Health check configuration for direct container health checks - optimiert für schnelle Redeploys
       healthCheck = {
+        # Option 1: Mit curl (jetzt installiert)
         command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/health || exit 1"]
+        # Option 2: Mit Python-Script
+        # command     = ["CMD-SHELL", "python /app/health_check.py || exit 1"]
         interval    = 30
         timeout     = 5
         retries     = 3
