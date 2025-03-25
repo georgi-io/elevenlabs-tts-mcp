@@ -33,4 +33,10 @@ variable "tls_server_name" {
   description = "Server name to verify in the TLS handshake"
   type        = string
   default     = "api.run.georgi.io"
+}
+
+variable "route_id" {
+  description = "ID der zentral erstellten Route, die mit der Integration verbunden werden soll"
+  type        = string
+  default     = ""
 } 

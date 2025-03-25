@@ -274,4 +274,7 @@ module "api_gateway" {
   api_gateway_id = data.terraform_remote_state.infrastructure.outputs.api_gateway_id
   vpc_link_id = data.terraform_remote_state.infrastructure.outputs.vpc_link_id
   central_alb_https_listener_arn = data.terraform_remote_state.infrastructure.outputs.central_alb_https_listener_arn
+  
+  # Die Route-ID aus der zentralen Infrastruktur für die Verbindung mit der Integration
+  route_id = data.terraform_remote_state.infrastructure.outputs.jessica_service_route_id
 } 
