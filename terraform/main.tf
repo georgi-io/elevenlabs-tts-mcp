@@ -48,7 +48,7 @@ resource "aws_ssm_parameter" "jessica_base_path" {
   name        = "/jessica/${var.environment}/base-path"
   description = "Base path for Jessica service"
   type        = "String"
-  value       = "jessica"
+  value       = "jessica-service"
   
   tags = {
     Environment = var.environment
@@ -60,7 +60,7 @@ resource "aws_ssm_parameter" "jessica_root_path" {
   name        = "/jessica/${var.environment}/root-path"
   description = "ROOT_PATH for Jessica service (with leading slash)"
   type        = "String"
-  value       = "/jessica"
+  value       = "/jessica-service"
   
   tags = {
     Environment = var.environment
@@ -72,7 +72,7 @@ resource "aws_ssm_parameter" "jessica_api_url" {
   name        = "/jessica/${var.environment}/api-url"
   description = "API URL for Jessica service"
   type        = "String"
-  value       = "https://api.run.georgi.io/jessica"
+  value       = "https://api.run.georgi.io/jessica-service"
   
   tags = {
     Environment = var.environment
@@ -258,7 +258,10 @@ module "api_gateway" {
   source = "./aws/api_gateway"
   
   # Service information
-  service_name = "jessica"
+  # Hinweis: Die Route "ANY /jessica-service/{proxy+}" existiert bereits im API Gateway
+  # und wird durch das zentrale Infrastructure-Repository verwaltet.
+  # Dieses Modul erstellt nur noch die Integration, aber nicht mehr die Route selbst.
+  service_name = "jessica-service"
   container_port = 9020
   
   # TLS configuration

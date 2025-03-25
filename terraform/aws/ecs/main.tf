@@ -63,7 +63,7 @@ resource "aws_lb_target_group" "ws" {
   health_check {
     enabled             = true
     protocol            = "HTTP"
-    path                = "/jessica-service/health"
+    path                = "/health"
     port                = "traffic-port"
     healthy_threshold   = 3
     unhealthy_threshold = 3
@@ -193,7 +193,7 @@ resource "aws_ecs_task_definition" "service" {
       
       # Health check configuration for direct container health checks - optimiert für schnelle Redeploys
       healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/jessica-service/health || exit 1"]
+        command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/health || exit 1"]
         interval    = 30
         timeout     = 5
         retries     = 3
