@@ -1,6 +1,6 @@
 output "api_integration_id" {
-  description = "ID of the API Gateway integration"
-  value       = aws_apigatewayv2_integration.api.id
+  description = "ID of the API Gateway integration (ALB VPC Link)"
+  value       = length(aws_apigatewayv2_integration.api) > 0 ? aws_apigatewayv2_integration.api[0].id : var.jessica_service_integration_id
 }
 
 # Da die Route nicht mehr über Terraform verwaltet wird, sind diese Outputs nicht mehr verfügbar

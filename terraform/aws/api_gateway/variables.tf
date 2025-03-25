@@ -39,4 +39,10 @@ variable "route_id" {
   description = "ID der zentral erstellten Route, die mit der Integration verbunden werden soll"
   type        = string
   default     = ""
+}
+
+variable "jessica_service_integration_id" {
+  description = "ID der Jessica Service Integration aus dem Hub, die aktualisiert werden soll"
+  type        = string
+  default     = ""
 } 

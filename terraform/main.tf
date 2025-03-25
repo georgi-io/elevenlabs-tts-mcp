@@ -260,7 +260,7 @@ module "api_gateway" {
   # Service information
   # Hinweis: Die Route "ANY /jessica-service/{proxy+}" existiert bereits im API Gateway
   # und wird durch das zentrale Infrastructure-Repository verwaltet.
-  # Dieses Modul erstellt nur noch die Integration, aber nicht mehr die Route selbst.
+  # Dieses Modul aktualisiert die zentral verwaltete Integration direkt.
   service_name = "jessica-service"
   container_port = 9020
   
@@ -275,6 +275,9 @@ module "api_gateway" {
   vpc_link_id = data.terraform_remote_state.infrastructure.outputs.vpc_link_id
   central_alb_https_listener_arn = data.terraform_remote_state.infrastructure.outputs.central_alb_https_listener_arn
   
-  # Die Route-ID aus der zentralen Infrastruktur für die Verbindung mit der Integration
+  # Die Integration-ID aus der zentralen Infrastruktur für direkte Integration ohne AWS CLI
+  jessica_service_integration_id = data.terraform_remote_state.infrastructure.outputs.jessica_service_integration_id
+  
+  # Die Route-ID wird für die Referenz aufbewahrt, wird aber nicht mehr für update-route verwendet
   route_id = data.terraform_remote_state.infrastructure.outputs.jessica_service_route_id
 } 
