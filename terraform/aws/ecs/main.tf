@@ -131,6 +131,13 @@ resource "aws_iam_role_policy_attachment" "ecs_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Attach additional policies to the ECS Task Execution Role if provided
+resource "aws_iam_role_policy_attachment" "ecs_execution_additional" {
+  count      = length(var.additional_execution_role_policy_arns)
+  role       = aws_iam_role.ecs_execution.name
+  policy_arn = var.additional_execution_role_policy_arns[count.index]
+}
+
 # Create IAM Role for the ECS Task
 resource "aws_iam_role" "ecs_task" {
   name = "${var.service_name}-ecs-task-role"

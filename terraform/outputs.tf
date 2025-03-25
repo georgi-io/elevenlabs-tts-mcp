@@ -119,4 +119,29 @@ output "api_gateway_id" {
 output "vpc_link_id" {
   description = "ID of the VPC Link used by API Gateway"
   value       = data.terraform_remote_state.infrastructure.outputs.vpc_link_id
+}
+
+# SSM Parameter outputs
+output "ssm_parameter_names" {
+  description = "SSM Parameter names for Jessica service"
+  value = {
+    base_path = aws_ssm_parameter.jessica_base_path.name
+    api_url   = aws_ssm_parameter.jessica_api_url.name
+    host      = aws_ssm_parameter.jessica_host.name
+    port      = aws_ssm_parameter.jessica_port.name
+    debug     = aws_ssm_parameter.jessica_debug.name
+    eleven_labs_api_key = aws_ssm_parameter.jessica_eleven_labs_api_key.name
+  }
+}
+
+output "ssm_parameter_arns" {
+  description = "SSM Parameter ARNs for Jessica service"
+  value = {
+    base_path = aws_ssm_parameter.jessica_base_path.arn
+    api_url   = aws_ssm_parameter.jessica_api_url.arn
+    host      = aws_ssm_parameter.jessica_host.arn
+    port      = aws_ssm_parameter.jessica_port.arn
+    debug     = aws_ssm_parameter.jessica_debug.arn
+    eleven_labs_api_key = aws_ssm_parameter.jessica_eleven_labs_api_key.arn
+  }
 } 

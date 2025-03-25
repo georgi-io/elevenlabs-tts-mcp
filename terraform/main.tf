@@ -28,6 +28,10 @@ provider "aws" {
   }
 }
 
+# Helper data resources
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
 # Import central infrastructure outputs
 data "terraform_remote_state" "infrastructure" {
   backend = "s3"
@@ -37,6 +41,110 @@ data "terraform_remote_state" "infrastructure" {
     region = "eu-central-1"
     profile = var.aws_profile
   }
+}
+
+# SSM Parameter Store for environment variables
+resource "aws_ssm_parameter" "jessica_base_path" {
+  name        = "/jessica/${var.environment}/base-path"
+  description = "Base path for Jessica service"
+  type        = "String"
+  value       = "jessica-service"
+  
+  tags = {
+    Environment = var.environment
+    Service     = "jessica"
+  }
+}
+
+resource "aws_ssm_parameter" "jessica_api_url" {
+  name        = "/jessica/${var.environment}/api-url"
+  description = "API URL for Jessica service"
+  type        = "String"
+  value       = "https://api.run.georgi.io/jessica-service"
+  
+  tags = {
+    Environment = var.environment
+    Service     = "jessica"
+  }
+}
+
+# For sensitive data use SecureString
+resource "aws_ssm_parameter" "jessica_eleven_labs_api_key" {
+  name        = "/jessica/${var.environment}/eleven-labs-api-key"
+  description = "Eleven Labs API Key for voice synthesis"
+  type        = "SecureString"
+  value       = var.eleven_labs_api_key != "" ? var.eleven_labs_api_key : "PLACE_REAL_KEY_IN_AWS_CONSOLE"
+  overwrite   = true
+  
+  lifecycle {
+    ignore_changes = [value]
+  }
+  
+  tags = {
+    Environment = var.environment
+    Service     = "jessica"
+  }
+}
+
+# Zusätzliche Environment-Variablen als SSM Parameter
+resource "aws_ssm_parameter" "jessica_host" {
+  name        = "/jessica/${var.environment}/host"
+  description = "Host configuration for Jessica service"
+  type        = "String"
+  value       = "0.0.0.0"
+  
+  tags = {
+    Environment = var.environment
+    Service     = "jessica"
+  }
+}
+
+resource "aws_ssm_parameter" "jessica_port" {
+  name        = "/jessica/${var.environment}/port"
+  description = "Port configuration for Jessica service"
+  type        = "String"
+  value       = "9020"
+  
+  tags = {
+    Environment = var.environment
+    Service     = "jessica"
+  }
+}
+
+resource "aws_ssm_parameter" "jessica_debug" {
+  name        = "/jessica/${var.environment}/debug"
+  description = "Debug flag for Jessica service"
+  type        = "String"
+  value       = "false"
+  
+  tags = {
+    Environment = var.environment
+    Service     = "jessica"
+  }
+}
+
+# IAM Policy for SSM Parameter access
+resource "aws_iam_policy" "jessica_ssm_access" {
+  name        = "jessica-ssm-access-${var.environment}"
+  description = "Allow access to Jessica SSM parameters"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = [
+          "ssm:GetParameters",
+          "secretsmanager:GetSecretValue",
+          "kms:Decrypt"
+        ]
+        Resource = [
+          "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/jessica/${var.environment}/*",
+          "arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"
+        ]
+      }
+    ]
+  })
 }
 
 # Include ECR module
@@ -105,13 +213,19 @@ module "ecs" {
   central_alb_arn = data.terraform_remote_state.infrastructure.outputs.central_alb_arn
   central_alb_https_listener_arn = data.terraform_remote_state.infrastructure.outputs.central_alb_https_listener_arn
   
-  # Environment variables for the container
-  environment_variables = {
-    HOST = "0.0.0.0"
-    PORT = "9020"
-    DEBUG = "false"
-    BASE_PATH = "/jessica-service"
+  # We're replacing environment variables with SSM parameters
+  # These are now handled as secrets in the task definition
+  secrets = {
+    "BASE_PATH" = aws_ssm_parameter.jessica_base_path.arn,
+    "API_URL" = aws_ssm_parameter.jessica_api_url.arn,
+    "HOST" = aws_ssm_parameter.jessica_host.arn,
+    "PORT" = aws_ssm_parameter.jessica_port.arn,
+    "DEBUG" = aws_ssm_parameter.jessica_debug.arn,
+    "ELEVEN_LABS_API_KEY" = aws_ssm_parameter.jessica_eleven_labs_api_key.arn
   }
+  
+  # Attach the SSM access policy to the ECS task execution role
+  additional_execution_role_policy_arns = [aws_iam_policy.jessica_ssm_access.arn]
   
   # Enable cost optimization through scheduled scaling
   enable_scheduled_scaling = true
@@ -126,9 +240,6 @@ module "api_gateway" {
   # Service information
   service_name = "jessica"
   container_port = 9020
-  
-  # Route ID from CLI test
-  route_id = "obtwkmk"
   
   # TLS configuration
   tls_server_name = "api.run.georgi.io"

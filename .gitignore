@@ -1,3 +1,4 @@
+terraform-global
 src/auth-service
 .ruff_cache/
 # Dependencies

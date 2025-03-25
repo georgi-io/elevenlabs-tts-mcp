@@ -75,6 +75,12 @@ variable "secrets" {
   default     = {}
 }
 
+variable "additional_execution_role_policy_arns" {
+  description = "List of additional IAM policy ARNs to attach to the task execution role"
+  type        = list(string)
+  default     = []
+}
+
 variable "log_retention_days" {
   description = "Number of days to retain logs"
   type        = number
